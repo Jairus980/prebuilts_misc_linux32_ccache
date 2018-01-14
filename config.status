@@ -433,7 +433,7 @@ Copyright (C) 2012 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/root/tmp/ccache-3.3.4'
+ac_pwd='/root/tmp/prebuilts_misc_linux32_ccache'
 srcdir='.'
 INSTALL='/usr/bin/install -c'
 test -n "$AWK" || AWK=awk
@@ -611,14 +611,14 @@ S["RANLIB"]="ranlib"
 S["INSTALL_DATA"]="${INSTALL} -m 644"
 S["INSTALL_SCRIPT"]="${INSTALL}"
 S["INSTALL_PROGRAM"]="${INSTALL}"
-S["CPP"]="gcc -std=gnu99 -E"
+S["CPP"]="gcc -E"
 S["OBJEXT"]="o"
 S["EXEEXT"]=""
 S["ac_ct_CC"]="gcc"
 S["CPPFLAGS"]=""
 S["LDFLAGS"]=""
 S["CFLAGS"]="-g -O2 -Wall -W"
-S["CC"]="gcc -std=gnu99"
+S["CC"]="gcc"
 S["test_suites"]="./test/test_args.c ./test/test_argument_processing.c ./test/test_compopt.c ./test/test_conf.c ./test/test_counters.c ./test/test_hash.c ./test/test_"\
 "hashutil.c ./test/test_lockfile.c ./test/test_stats.c ./test/test_util.c"
 S["include_dev_mk"]=""

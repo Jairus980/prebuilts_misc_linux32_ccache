@@ -2,12 +2,12 @@
 .\"     Title: ccache
 .\"    Author: [see the "Author" section]
 .\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 02/17/2017
+.\"      Date: 01/13/2018
 .\"    Manual: ccache Manual
-.\"    Source: ccache 3.3.4
+.\"    Source: ccache 3.3.5
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "02/17/2017" "ccache 3\&.3\&.4" "ccache Manual"
+.TH "CCACHE" "1" "01/13/2018" "ccache 3\&.3\&.5" "ccache Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -533,7 +533,9 @@ If true, ccache will not discard the comments before hashing preprocessor output
 .PP
 \fBlimit_multiple\fR (\fBCCACHE_LIMIT_MULTIPLE\fR)
 .RS 4
-Sets the limit when cleaning up\&. Files are deleted (in LRU order) until the levels are below the limit\&. The default is 0\&.8 (= 80%)\&.
+Sets the limit when cleaning up\&. Files are deleted (in LRU order) until the levels are below the limit\&. The default is 0\&.8 (= 80%)\&. See
+AUTOMATIC CLEANUP
+for more information\&.
 .RE
 .PP
 \fBlog_file\fR (\fBCCACHE_LOGFILE\fR)
@@ -543,12 +545,14 @@ If set to a file path, ccache will write information on what it is doing to the 
 .PP
 \fBmax_files\fR (\fBCCACHE_MAXFILES\fR)
 .RS 4
-This option specifies the maximum number of files to keep in the cache\&. Use 0 for no limit (which is the default)\&.
+This option specifies the maximum number of files to keep in the cache\&. Use 0 for no limit (which is the default)\&. See also
+CACHE SIZE MANAGEMENT\&.
 .RE
 .PP
 \fBmax_size\fR (\fBCCACHE_MAXSIZE\fR)
 .RS 4
-This option specifies the maximum size of the cache\&. Use 0 for no limit\&. The default value is 5G\&. Available suffixes: k, M, G, T (decimal) and Ki, Mi, Gi, Ti (binary)\&. The default suffix is "G"\&.
+This option specifies the maximum size of the cache\&. Use 0 for no limit\&. The default value is 5G\&. Available suffixes: k, M, G, T (decimal) and Ki, Mi, Gi, Ti (binary)\&. The default suffix is "G"\&. See also
+CACHE SIZE MANAGEMENT\&.
 .RE
 .PP
 \fBpath\fR (\fBCCACHE_PATH\fR)
@@ -613,7 +617,7 @@ being present in the source\&.
 .PP
 \fBfile_stat_matches\fR
 .RS 4
-ccache normally examines a file\(cqs contents to determine whether it matches the cached version\&. With this option set, ccache will consider a file as matching its cached version if the sizes, mtimes and ctimes match\&.
+ccache normally examines a file\(cqs contents to determine whether it matches the cached version\&. With this option set, ccache will consider a file as matching its cached version if the mtimes and ctimes match\&.
 .RE
 .PP
 \fBinclude_file_ctime\fR
@@ -633,7 +637,8 @@ By default, ccache will also include all system headers in the manifest\&. With 
 .PP
 \fBpch_defines\fR
 .RS 4
-Be sloppy about #defines when precompiling a header file\&. See
+Be sloppy about
+\fB#define\fRs when precompiling a header file\&. See
 PRECOMPILED HEADERS
 for more information\&.
 .RE
@@ -697,7 +702,62 @@ macro\&. Also note that enabling the unifier implies turning off the direct mode
 .RE
 .SH "CACHE SIZE MANAGEMENT"
 .sp
-By default, ccache has a five gigabyte limit on the total size of files in the cache and no maximum number of files\&. You can set different limits using the \fB\-M\fR/\fB\-\-max\-size\fR and \fB\-F\fR/\fB\-\-max\-files\fR options\&. Use \fBccache \-s/\-\-show\-stats\fR to see the cache size and the currently configured limits (in addition to other various statistics)\&.
+By default, ccache has a 5 GB limit on the total size of files in the cache and no limit on the number of files\&. You can set different limits using the \fB\-M\fR/\fB\-\-max\-size\fR and \fB\-F\fR/\fB\-\-max\-files\fR options\&. Use \fBccache \-s/\-\-show\-stats\fR to see the cache size and the currently configured limits (in addition to other various statistics)\&.
+.sp
+Cleanup can be triggered in two different ways: automatic and manual\&.
+.SS "Automatic cleanup"
+.sp
+ccache maintains counters for various statistics about the cache, including the size and number of all cached files\&. In order to improve performance and reduce issues with concurrent ccache invocations, there is one statistics file for each of the sixteen subdirectories in the cache\&.
+.sp
+After a new compilation result has been written to the cache, ccache will update the size and file number statistics for the subdirectory (one of sixteen) to which the result was written\&. Then, if the size counter for said subdirectory is greater than \fBmax_size / 16\fR or the file number counter is greater than \fBmax_files / 16\fR, automatic cleanup is triggered\&.
+.sp
+When automatic cleanup is triggered for a subdirectory in the cache, ccache will:
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  1." 4.2
+.\}
+Count all files in the subdirectory and compute their aggregated size\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  2." 4.2
+.\}
+Remove files in LRU (least recently used) order until the size is at most
+\fBlimit_multiple * max_size / 16\fR
+and the number of files is at most
+\fBlimit_multiple * max_files / 16\fR, where
+\fBlimit_multiple\fR,
+\fBmax_size\fR
+and
+\fBmax_files\fR
+are configuration settings\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  3." 4.2
+.\}
+Set the size and file number counters to match the files that were kept\&.
+.RE
+.sp
+The reason for removing more files than just those needed to not exceed the max limits is that a cleanup is a fairly slow operation, so it would not be a good idea to trigger it often, like after each cache miss\&.
+.SS "Manual cleanup"
+.sp
+You can run \fBccache \-c/\-\-cleanup\fR to force cleanup of the whole cache, i\&.e\&. all of the sixteen subdirectories\&. This will recalculate the statistics counters and make sure that the \fBmax_size\fR and \fBmax_files\fR settings are not exceeded\&. Note that \fBlimit_multiple\fR is not taken into account for manual cleanup\&.
 .SH "CACHE COMPRESSION"
 .sp
 ccache can optionally compress all files it puts into the cache using the compression library zlib\&. While this may involve a tiny performance slowdown, it increases the number of files that fit in the cache\&. You can turn on compression with the \fBcompression\fR configuration setting and you can also tweak the compression level with \fBcompression_level\fR\&.
@@ -1324,7 +1384,8 @@ to
 \fB__TIME__\fR
 or
 \fB__DATE__\fR
-is used when using a precompiled header\&. Further, it can\(cqt detect changes in #defines in the source code because of how preprocessing works in combination with precompiled headers\&.
+is used when using a precompiled header\&. Further, it can\(cqt detect changes in
+\fB#define\fRs in the source code because of how preprocessing works in combination with precompiled headers\&.
 .RE
 .sp
 .RS 4

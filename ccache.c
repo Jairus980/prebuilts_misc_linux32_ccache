@@ -1,7 +1,7 @@
 // ccache -- a fast C/C++ compiler cache
 //
 // Copyright (C) 2002-2007 Andrew Tridgell
-// Copyright (C) 2009-2017 Joel Rosdahl
+// Copyright (C) 2009-2018 Joel Rosdahl
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
@@ -37,7 +37,7 @@ static const char VERSION_TEXT[] =
   MYNAME " version %s\n"
   "\n"
   "Copyright (C) 2002-2007 Andrew Tridgell\n"
-  "Copyright (C) 2009-2017 Joel Rosdahl\n"
+  "Copyright (C) 2009-2018 Joel Rosdahl\n"
   "\n"
   "This program is free software; you can redistribute it and/or modify it under\n"
   "the terms of the GNU General Public License as published by the Free Software\n"
@@ -172,7 +172,10 @@ static bool generating_dependencies;
 static bool generating_coverage;
 
 // Relocating debuginfo in the format old=new.
-static char *debug_prefix_map = NULL;
+static char **debug_prefix_maps = NULL;
+
+// Size of debug_prefix_maps list.
+static size_t debug_prefix_maps_len = 0;
 
 // Is the compiler being asked to output coverage data (.gcda) at runtime?
 static bool profile_arcs;
@@ -194,7 +197,7 @@ static char *cpp_stderr;
 char *stats_file = NULL;
 
 // Whether the output is a precompiled header.
-static bool output_is_precompiled_header = false;
+bool output_is_precompiled_header = false;
 
 // Profile generation / usage information.
 static char *profile_dir = NULL;
@@ -557,12 +560,16 @@ remember_include_file(char *path, struct mdfour *cpp_hash, bool system)
 		}
 	}
 
+	// The comparison using >= is intentional, due to a possible race between
+	// starting compilation and writing the include file. See also the notes
+	// under "Performance" in MANUAL.txt.
 	if (!(conf->sloppiness & SLOPPY_INCLUDE_FILE_MTIME)
 	    && st.st_mtime >= time_of_compilation) {
 		cc_log("Include file %s too new", path);
 		goto failure;
 	}
 
+	// The same >= logic as above applies to the change time of the file.
 	if (!(conf->sloppiness & SLOPPY_INCLUDE_FILE_CTIME)
 	    && st.st_ctime >= time_of_compilation) {
 		cc_log("Include file %s ctime too new", path);
@@ -1548,8 +1555,8 @@ calculate_common_hash(struct args *args, struct mdfour *hash)
 	// Possibly hash the current working directory.
 	if (generating_debuginfo && conf->hash_dir) {
 		char *cwd = gnu_getcwd();
-		if (debug_prefix_map) {
-			char *map = debug_prefix_map;
+		for (size_t i = 0; i < debug_prefix_maps_len; i++) {
+			char *map = debug_prefix_maps[i];
 			char *sep = strchr(map, '=');
 			if (sep) {
 				char *old = x_strndup(map, sep - map);
@@ -1632,19 +1639,23 @@ calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 		hash_int(hash, MANIFEST_VERSION);
 	}
 
+	// clang will emit warnings for unused linker flags, so we shouldn't skip
+	// those arguments.
+	int is_clang = compiler_is_clang(args);
+
 	// First the arguments.
 	for (int i = 1; i < args->argc; i++) {
-		// -L doesn't affect compilation.
-		if (i < args->argc-1 && str_eq(args->argv[i], "-L")) {
+		// -L doesn't affect compilation (except for clang).
+		if (i < args->argc-1 && str_eq(args->argv[i], "-L") && !is_clang) {
 			i++;
 			continue;
 		}
-		if (str_startswith(args->argv[i], "-L")) {
+		if (str_startswith(args->argv[i], "-L") && !is_clang) {
 			continue;
 		}
 
-		// -Wl,... doesn't affect compilation.
-		if (str_startswith(args->argv[i], "-Wl,")) {
+		// -Wl,... doesn't affect compilation (except for clang).
+		if (str_startswith(args->argv[i], "-Wl,") && !is_clang) {
 			continue;
 		}
 
@@ -1662,7 +1673,9 @@ calculate_object_hash(struct args *args, struct mdfour *hash, int direct_mode)
 		if (!direct_mode && !output_is_precompiled_header
 		    && !using_precompiled_header) {
 			if (compopt_affects_cpp(args->argv[i])) {
-				i++;
+				if (compopt_takes_arg(args->argv[i])) {
+					i++;
+				}
 				continue;
 			}
 			if (compopt_short(compopt_affects_cpp, args->argv[i])) {
@@ -1863,15 +1876,19 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 		return;
 	}
 
-	struct stat st;
-	if (stat(cached_obj, &st) != 0) {
-		cc_log("Object file %s not in cache", cached_obj);
+	// We can't trust the objects based on running the preprocessor
+	// when the output is precompiled headers, as the hash does not
+	// include the mtime of each included header, breaking compilation
+	// with clang when the precompiled header is used after touching
+	// one of the included files.
+	if (output_is_precompiled_header && mode == FROMCACHE_CPP_MODE) {
+		cc_log("Not using preprocessed cached object for precompiled header");
 		return;
 	}
 
-	// Check if the diagnostic file is there.
-	if (output_dia && stat(cached_dia, &st) != 0) {
-		cc_log("Diagnostic file %s not in cache", cached_dia);
+	struct stat st;
+	if (stat(cached_obj, &st) != 0) {
+		cc_log("Object file %s not in cache", cached_obj);
 		return;
 	}
 
@@ -1910,6 +1927,12 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 		return;
 	}
 
+	// Check if the diagnostic file is there.
+	if (output_dia && stat(cached_dia, &st) != 0) {
+		cc_log("Diagnostic file %s not in cache", cached_dia);
+		return;
+	}
+
 	// Copy object file from cache. Do so also for FissionDwarf file, cached_dwo,
 	// when -gsplit-dwarf is specified.
 	if (!str_eq(output_obj, "/dev/null")) {
@@ -1945,11 +1968,6 @@ from_cache(enum fromcache_call_mode mode, bool put_object_in_manifest)
 	}
 	if (cached_dwo) {
 		update_mtime(cached_dwo);
-	}
-
-	if (generating_dependencies && mode == FROMCACHE_CPP_MODE
-	    && !conf->read_only && !conf->read_only_direct) {
-		put_file_in_cache(output_dep, cached_dep);
 	}
 
 	send_cached_stderr();
@@ -2110,8 +2128,6 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 	struct args *dep_args = args_init(0, NULL);
 
 	bool found_color_diagnostics = false;
-	int debug_level = 0;
-	const char *debug_argument = NULL;
 
 	int argc = expanded_args->argc;
 	char **argv = expanded_args->argv;
@@ -2162,8 +2178,8 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 
 		// Handle cuda "-optf" and "--options-file" argument.
 		if (str_eq(argv[i], "-optf") || str_eq(argv[i], "--options-file")) {
-			if (i > argc) {
-				cc_log("Expected argument after -optf/--options-file");
+			if (i == argc - 1) {
+				cc_log("Expected argument after %s", argv[i]);
 				stats_update(STATS_ARGS);
 				result = false;
 				goto out;
@@ -2264,7 +2280,7 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 		// Special handling for -x: remember the last specified language before the
 		// input file and strip all -x options from the arguments.
 		if (str_eq(argv[i], "-x")) {
-			if (i == argc-1) {
+			if (i == argc - 1) {
 				cc_log("Missing argument to %s", argv[i]);
 				stats_update(STATS_ARGS);
 				result = false;
@@ -2285,7 +2301,7 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 
 		// We need to work out where the output was meant to go.
 		if (str_eq(argv[i], "-o")) {
-			if (i == argc-1) {
+			if (i == argc - 1) {
 				cc_log("Missing argument to %s", argv[i]);
 				stats_update(STATS_ARGS);
 				result = false;
@@ -2309,7 +2325,10 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 			continue;
 		}
 		if (str_startswith(argv[i], "-fdebug-prefix-map=")) {
-			debug_prefix_map = x_strdup(argv[i] + 19);
+			debug_prefix_maps = x_realloc(
+				debug_prefix_maps,
+				(debug_prefix_maps_len + 1) * sizeof(char *));
+			debug_prefix_maps[debug_prefix_maps_len++] = x_strdup(argv[i] + 19);
 			args_add(stripped_args, argv[i]);
 			continue;
 		}
@@ -2317,32 +2336,17 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 		// Debugging is handled specially, so that we know if we can strip line
 		// number info.
 		if (str_startswith(argv[i], "-g")) {
-			const char *pLevel = argv[i] + 2;
-			if (str_startswith(argv[i], "-ggdb")) {
-				pLevel = argv[i] + 5;
-			} else if (str_startswith(argv[i], "-gstabs")) {
-				pLevel = argv[i] + 7;
-			} else if (str_startswith(argv[i], "-gcoff")) {
-				pLevel = argv[i] + 6;
-			} else if (str_startswith(argv[i], "-gxcoff")) {
-				pLevel = argv[i] + 7;
-			} else if (str_startswith(argv[i], "-gvms")) {
-				pLevel = argv[i] + 5;
+			generating_debuginfo = true;
+			args_add(stripped_args, argv[i]);
+			if (conf->unify && !str_eq(argv[i], "-g0")) {
+				cc_log("%s used; disabling unify mode", argv[i]);
+				conf->unify = false;
 			}
-
-			// Deduce level from argument, default is 2.
-			int foundlevel = -1;
-			if (pLevel[0] == '\0') {
-				foundlevel = 2;
-			} else if (pLevel[0] >= '0' && pLevel[0] <= '9') {
-				foundlevel = atoi(pLevel);
+			if (str_eq(argv[i], "-g3")) {
+				cc_log("%s used; not compiling preprocessed code", argv[i]);
+				conf->run_second_cpp = true;
 			}
-
-			if (foundlevel >= 0) {
-				debug_level = foundlevel;
-				debug_argument = argv[i];
-				continue;
-			}
+			continue;
 		}
 
 		// These options require special handling, because they behave differently
@@ -2360,7 +2364,7 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 			bool separate_argument = (strlen(argv[i]) == 3);
 			if (separate_argument) {
 				// -MF arg
-				if (i >= argc - 1) {
+				if (i == argc - 1) {
 					cc_log("Missing argument to %s", argv[i]);
 					stats_update(STATS_ARGS);
 					result = false;
@@ -2390,7 +2394,7 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 			char *relpath;
 			if (strlen(argv[i]) == 3) {
 				// -MQ arg or -MT arg
-				if (i >= argc - 1) {
+				if (i == argc - 1) {
 					cc_log("Missing argument to %s", argv[i]);
 					stats_update(STATS_ARGS);
 					result = false;
@@ -2507,7 +2511,7 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 		}
 
 		if (str_eq(argv[i], "--serialize-diagnostics")) {
-			if (i >= argc - 1) {
+			if (i == argc - 1) {
 				cc_log("Missing argument to %s", argv[i]);
 				stats_update(STATS_ARGS);
 				result = false;
@@ -2597,7 +2601,7 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 		// to get better hit rate. A secondary effect is that paths in the standard
 		// error output produced by the compiler will be normalized.
 		if (compopt_takes_path(argv[i])) {
-			if (i == argc-1) {
+			if (i == argc - 1) {
 				cc_log("Missing argument to %s", argv[i]);
 				stats_update(STATS_ARGS);
 				result = false;
@@ -2649,7 +2653,7 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 
 		// Options that take an argument.
 		if (compopt_takes_arg(argv[i])) {
-			if (i == argc-1) {
+			if (i == argc - 1) {
 				cc_log("Missing argument to %s", argv[i]);
 				stats_update(STATS_ARGS);
 				result = false;
@@ -2725,19 +2729,6 @@ cc_process_args(struct args *args, struct args **preprocessor_args,
 			input_file = make_relative_path(x_strdup(argv[i]));
 		}
 	} // for
-
-	if (debug_level > 0) {
-		generating_debuginfo = true;
-		args_add(stripped_args, debug_argument);
-		if (conf->unify) {
-			cc_log("%s used; disabling unify mode", debug_argument);
-			conf->unify = false;
-		}
-		if (debug_level >= 3 && !conf->run_second_cpp) {
-			cc_log("%s used; not compiling preprocessed code", debug_argument);
-			conf->run_second_cpp = true;
-		}
-	}
 
 	if (found_S_opt) {
 		// Even if -gsplit-dwarf is given, the .dwo file is not generated when -S
@@ -3092,7 +3083,12 @@ cc_reset(void)
 	free(primary_config_path); primary_config_path = NULL;
 	free(secondary_config_path); secondary_config_path = NULL;
 	free(current_working_dir); current_working_dir = NULL;
-	free(debug_prefix_map); debug_prefix_map = NULL;
+	for (size_t i = 0; i < debug_prefix_maps_len; i++) {
+		free(debug_prefix_maps[i]);
+		debug_prefix_maps[i] = NULL;
+	}
+	free(debug_prefix_maps); debug_prefix_maps = NULL;
+	debug_prefix_maps_len = 0;
 	free(profile_dir); profile_dir = NULL;
 	free(included_pch_file); included_pch_file = NULL;
 	args_free(orig_args); orig_args = NULL;
@@ -3142,6 +3138,7 @@ static void
 setup_uncached_err(void)
 {
 	int uncached_fd = dup(2);
+	set_cloexec_flag(uncached_fd);
 	if (uncached_fd == -1) {
 		cc_log("dup(2) failed: %s", strerror(errno));
 		failed();
@@ -3352,7 +3349,7 @@ ccache_main_options(int argc, char *argv[])
 
 		case 'c': // --cleanup
 			initialize();
-			cleanup_all(conf);
+			clean_up_all(conf);
 			printf("Cleaned cache\n");
 			break;
 

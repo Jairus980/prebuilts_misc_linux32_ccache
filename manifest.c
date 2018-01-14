@@ -377,18 +377,23 @@ verify_object(struct conf *conf, struct manifest *mf, struct object *obj,
 			hashtable_insert(stated_files, x_strdup(path), st);
 		}
 
+		if (fi->size != st->size) {
+			return 0;
+		}
+
+		// Clang stores the mtime of the included files in the precompiled header,
+		// and will error out if that header is later used without rebuilding.
+		if (output_is_precompiled_header && fi->mtime != st->mtime) {
+			cc_log("Precompiled header includes %s, which has a new mtime", path);
+			return 0;
+		}
+
 		if (conf->sloppiness & SLOPPY_FILE_STAT_MATCHES) {
-			// st->ctime is sometimes 0, so we can't check that both st->ctime and
-			// st->mtime are greater than time_of_compilation. But it's sufficient to
-			// check that either is.
-			if (fi->size == st->size
-			    && fi->mtime == st->mtime
-			    && fi->ctime == st->ctime
-			    && MAX(st->mtime, st->ctime) >= time_of_compilation) {
-				cc_log("size/mtime/ctime hit for %s", path);
+			if (fi->mtime == st->mtime && fi->ctime == st->ctime) {
+				cc_log("mtime/ctime hit for %s", path);
 				continue;
 			} else {
-				cc_log("size/mtime/ctime miss for %s", path);
+				cc_log("mtime/ctime miss for %s", path);
 			}
 		}
 

@@ -1,6 +1,53 @@
 ccache news
 ===========
 
+ccache 3.3.5
+------------
+Release date: 2018-01-13
+
+
+New features and improvements
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Documented how automatic cache cleanup works.
+
+
+Bug fixes
+~~~~~~~~~
+
+- Fixed a regression where the original order of debug options could be lost.
+  This reverts the ``Improved parsing of `-g*` options'' feature in ccache 3.3.
+
+- Multiple `-fdebug-prefix-map` options should now be handled correctly.
+
+- Fixed matching of directories in the `ignore_headers_in_manifest`
+  configuration option.
+
+- Fixed detection of missing argument to `-opt`/`--options-file`.
+
+- ccache now bails out when building a precompiled header if any of the
+  corresponding header files have an updated timestamp. This fixes complaints
+  from clang.
+
+- Fixed a bug related to erroneously storing a dependency file with absolute
+  paths in the cache on a preprocessed hit.
+
+- `ccache -c/--cleanup` now works like documented: it just recalculates size
+  counters and trims the cache to not exceed the max size and file number
+  limits. Previously, the forced cleanup took ``limit_multiple'' into account,
+  so that `ccache -c/--cleanup` by default would trim the cache to 80% of the
+  max limit.
+
+- ccache no longer ignores linker arguments for clang since clang warns about
+  them.
+
+- Plugged a couple of file descriptor leaks.
+
+- Fixed a bug where ccache would skip hashing the compiler argument following a
+  `-fno-working-directory`, `-fworking-directory`, `-nostdinc`, `-nostdinc++`,
+  `-remap` or `-trigraphs` option in preprocessor mode.
+
+
 ccache 3.3.4
 ------------
 Release date: 2017-02-17

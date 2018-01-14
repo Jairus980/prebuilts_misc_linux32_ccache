@@ -734,7 +734,7 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>ccache news</h1>
-<span id="revnumber">version 3.3.4</span>
+<span id="revnumber">version 3.3.5</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -742,11 +742,94 @@ asciidoc.install(2);
 </div>
 <div id="content">
 <div class="sect1">
+<h2 id="_ccache_3_3_5">ccache 3.3.5</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Release date: 2018-01-13</p></div>
+<div class="sect2">
+<h3 id="_new_features_and_improvements">New features and improvements</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Documented how automatic cache cleanup works.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_bug_fixes">Bug fixes</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Fixed a regression where the original order of debug options could be lost.
+  This reverts the &#8220;Improved parsing of <code>-g*</code> options&#8221; feature in ccache 3.3.
+</p>
+</li>
+<li>
+<p>
+Multiple <code>-fdebug-prefix-map</code> options should now be handled correctly.
+</p>
+</li>
+<li>
+<p>
+Fixed matching of directories in the <code>ignore_headers_in_manifest</code>
+  configuration option.
+</p>
+</li>
+<li>
+<p>
+Fixed detection of missing argument to <code>-opt</code>/<code>--options-file</code>.
+</p>
+</li>
+<li>
+<p>
+ccache now bails out when building a precompiled header if any of the
+  corresponding header files have an updated timestamp. This fixes complaints
+  from clang.
+</p>
+</li>
+<li>
+<p>
+Fixed a bug related to erroneously storing a dependency file with absolute
+  paths in the cache on a preprocessed hit.
+</p>
+</li>
+<li>
+<p>
+<code>ccache -c/--cleanup</code> now works like documented: it just recalculates size
+  counters and trims the cache to not exceed the max size and file number
+  limits. Previously, the forced cleanup took &#8220;limit_multiple&#8221; into account,
+  so that <code>ccache -c/--cleanup</code> by default would trim the cache to 80% of the
+  max limit.
+</p>
+</li>
+<li>
+<p>
+ccache no longer ignores linker arguments for clang since clang warns about
+  them.
+</p>
+</li>
+<li>
+<p>
+Plugged a couple of file descriptor leaks.
+</p>
+</li>
+<li>
+<p>
+Fixed a bug where ccache would skip hashing the compiler argument following a
+  <code>-fno-working-directory</code>, <code>-fworking-directory</code>, <code>-nostdinc</code>, <code>-nostdinc++</code>,
+  <code>-remap</code> or <code>-trigraphs</code> option in preprocessor mode.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_ccache_3_3_4">ccache 3.3.4</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2017-02-17</p></div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_2">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -756,7 +839,7 @@ Documented the different cache statistics counters.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes">Bug fixes</h3>
+<h3 id="_bug_fixes_2">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -786,7 +869,7 @@ Fixed undefined behavior warnings in ccache found by <code>-fsanitize=undefined<
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2016-10-26</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_2">Bug fixes</h3>
+<h3 id="_bug_fixes_3">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -803,7 +886,7 @@ ccache now detects usage of <code>.incbin</code> assembler directives in the sou
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2016-09-28</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_3">Bug fixes</h3>
+<h3 id="_bug_fixes_4">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -828,7 +911,7 @@ Fixed a regression in ccache 3.3.1: ccache could get confused when using the
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2016-09-07</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_4">Bug fixes</h3>
+<h3 id="_bug_fixes_5">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -863,7 +946,7 @@ A C99-compatible compiler is now required to build ccache.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_2">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_3">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1010,7 +1093,7 @@ Increased buffer size used when reading file data. This improves performance
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_5">Bug fixes</h3>
+<h3 id="_bug_fixes_6">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1036,7 +1119,7 @@ Fixed build and test for MinGW32 and Windows.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2016-09-28</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_6">Bug fixes</h3>
+<h3 id="_bug_fixes_7">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1054,7 +1137,7 @@ Fixed a regression in ccache 3.2.8: ccache could get confused when using the
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2016-09-07</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_7">Bug fixes</h3>
+<h3 id="_bug_fixes_8">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1078,7 +1161,7 @@ ccache now understands the undocumented <code>-coverage</code> (only one dash) G
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2016-07-20</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_8">Bug fixes</h3>
+<h3 id="_bug_fixes_9">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1101,7 +1184,7 @@ ccache now knows how to work around a glitch in the output of GCC 6&#8217;s
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2016-07-12</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_9">Bug fixes</h3>
+<h3 id="_bug_fixes_10">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1130,7 +1213,7 @@ Fixed a bug where (due to ccache rewriting paths) the compiler could choose
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2016-04-17</p></div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_3">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_4">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1151,7 +1234,7 @@ Made it harder to misinterpret documentation of boolean environment settings'
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_10">Bug fixes</h3>
+<h3 id="_bug_fixes_11">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1211,7 +1294,7 @@ The man page is now built when running &#8220;make install&#8221; from Git repos
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2015-10-08</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_11">Bug fixes</h3>
+<h3 id="_bug_fixes_12">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1256,7 +1339,7 @@ Fixed a bug where cache cleanup could be run too early for caches larger than
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2015-08-16</p></div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_4">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_5">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1266,7 +1349,7 @@ Added support for compiler option <code>-gsplit-dwarf</code>.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_12">Bug fixes</h3>
+<h3 id="_bug_fixes_13">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1303,7 +1386,7 @@ Only log "Disabling direct mode" once when failing to read potential include
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2015-05-10</p></div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_5">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_6">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1320,7 +1403,7 @@ Add support for caching code coverage results (compiling for gcov).
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_13">Bug fixes</h3>
+<h3 id="_bug_fixes_14">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1391,7 +1474,7 @@ Fixed build error when compiling ccache with recent clang versions.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2014-12-10</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_14">Bug fixes</h3>
+<h3 id="_bug_fixes_15">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1432,7 +1515,7 @@ Added missing documentation for <code>max_files</code> and <code>max_size</code>
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2014-11-17</p></div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_6">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_7">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1623,7 +1706,7 @@ Various other improvements of the test suite.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_15">Bug fixes</h3>
+<h3 id="_bug_fixes_16">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1654,7 +1737,7 @@ Fixed test suite failures when <code>CC</code> is a ccache-wrapped compiler.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2016-07-12</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_16">Bug fixes</h3>
+<h3 id="_bug_fixes_17">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1672,7 +1755,7 @@ Fixed a bug where (due to ccache rewriting paths) the compiler could choose
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2015-03-07</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_17">Bug fixes</h3>
+<h3 id="_bug_fixes_18">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1703,7 +1786,7 @@ Don&#8217;t try to reset a non-existing stats file. This avoids &#8220;No such f
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2014-10-19</p></div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_7">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_8">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1755,7 +1838,7 @@ Stale files in the internal temporary directory (<code>&lt;ccache_dir&gt;/tmp</c
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_18">Bug fixes</h3>
+<h3 id="_bug_fixes_19">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1795,7 +1878,7 @@ Fixed problem with logging of current working directory.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2013-01-06</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_19">Bug fixes</h3>
+<h3 id="_bug_fixes_20">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1845,7 +1928,7 @@ Fixed test suite to work on ecryptfs.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2012-08-11</p></div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_8">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_9">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1866,7 +1949,7 @@ Clang plugins are now hashed to catch plugin upgrades.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_20">Bug fixes</h3>
+<h3 id="_bug_fixes_21">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1914,7 +1997,7 @@ Fixed <code>static_assert</code> macro definition clash with GCC 4.7.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2012-01-08</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_21">Bug fixes</h3>
+<h3 id="_bug_fixes_22">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1987,7 +2070,7 @@ Improved documentation on how to fix bad object files in the cache.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2011-08-21</p></div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_9">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_10">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1997,7 +2080,7 @@ Rewrite argument to <code>--sysroot</code> if <code>CCACHE_BASEDIR</code> is use
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_22">Bug fixes</h3>
+<h3 id="_bug_fixes_23">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2018,7 +2101,7 @@ Fixed alignment of &#8220;called for preprocessing&#8221; counter.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2011-05-29</p></div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_10">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_11">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2050,7 +2133,7 @@ Improved order of statistics counters in <code>ccache -s</code> output.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_23">Bug fixes</h3>
+<h3 id="_bug_fixes_24">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2083,7 +2166,7 @@ Systems that lack (and don&#8217;t need to be linked with) libm are now supporte
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2011-01-09</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_24">Bug fixes</h3>
+<h3 id="_bug_fixes_25">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2116,7 +2199,7 @@ The file handle in now correctly closed on write error when trying to create
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-28</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_25">Bug fixes</h3>
+<h3 id="_bug_fixes_26">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2143,7 +2226,7 @@ Portability fixes for HP-UX 11.00 and other esoteric systems.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-21</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_26">Bug fixes</h3>
+<h3 id="_bug_fixes_27">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2191,7 +2274,7 @@ The test suite now also works on systems that lack a /dev/zero.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-11-07</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_27">Bug fixes</h3>
+<h3 id="_bug_fixes_28">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2245,7 +2328,7 @@ Minor debug log message improvements.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-09-16</p></div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_11">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_12">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2313,7 +2396,7 @@ Added <code>-install_name</code> as an option known to take an argument. (This i
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_28">Bug fixes</h3>
+<h3 id="_bug_fixes_29">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2399,7 +2482,7 @@ New <code>HACKING.txt</code> file with some notes about ccache code conventions.
 <div class="sectionbody">
 <div class="paragraph"><p>Release date: 2010-07-15</p></div>
 <div class="sect2">
-<h3 id="_bug_fixes_29">Bug fixes</h3>
+<h3 id="_bug_fixes_30">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2445,7 +2528,7 @@ The way the hashes are calculated has changed, so you won&#8217;t get cache hits
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_new_features_and_improvements_12">New features and improvements</h3>
+<h3 id="_new_features_and_improvements_13">New features and improvements</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2588,7 +2671,7 @@ The following options are no longer hashed in the preprocessor mode:
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_bug_fixes_30">Bug fixes</h3>
+<h3 id="_bug_fixes_31">Bug fixes</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2733,9 +2816,9 @@ Statistics counters are now correctly updated for -E option failures and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.3.4<br />
+Version 3.3.5<br />
 Last updated
- 2017-02-17 22:28:35 CET
+ 2018-01-13 17:52:20 CET
 </div>
 </div>
 </body>

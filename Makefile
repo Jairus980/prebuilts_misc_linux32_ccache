@@ -10,7 +10,7 @@ sysconfdir = ${prefix}/etc
 installcmd = /usr/bin/install -c
 
 AR = ar
-CC = gcc -std=gnu99
+CC = gcc
 CFLAGS = -g -O2 -Wall -W
 CPPFLAGS = 
 EXEEXT = 
