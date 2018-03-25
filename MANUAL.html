@@ -734,7 +734,7 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.3.5</span>
+<span id="revnumber">version 3.4.1</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -796,11 +796,6 @@ Easy installation.
 <li>
 <p>
 Low overhead.
-</p>
-</li>
-<li>
-<p>
-Optionally uses hard links where possible to avoid copies.
 </p>
 </li>
 <li>
@@ -1066,11 +1061,13 @@ max_size = 10G</code></pre>
 <div class="paragraph"><p>Some settings are boolean values (i.e. truth values). In a configuration file,
 such values must be set to the string <strong>true</strong> or <strong>false</strong>. For the corresponding
 environment variables, the semantics are a bit different: a set environment
-variable means &#8220;true&#8221; regardless of the value (even if set to the empty
-string), and an unset environment variable means &#8220;false&#8221;. Each boolean
-environment variable also has a negated form starting with <strong>CCACHE_NO</strong>. For
-example, <strong>CCACHE_COMPRESS</strong> can be set to force compression and
-<strong>CCACHE_NOCOMPRESS</strong> can be set to force no compression.</p></div>
+variable means &#8220;true&#8221; (even if set to the empty string), the following
+case-insensitive negative values are considered an error (rather than
+surprising the user): <strong>0</strong>, <strong>false</strong>, <strong>disable</strong> and <strong>no</strong>, and an unset
+environment variable means &#8220;false&#8221;. Each boolean environment variable also
+has a negated form starting with <strong>CCACHE_NO</strong>. For example, <strong>CCACHE_COMPRESS</strong>
+can be set to force compression and <strong>CCACHE_NOCOMPRESS</strong> can be set to force no
+compression.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_configuration_settings">Configuration settings</h3>
@@ -1087,12 +1084,12 @@ setting key.</p></div>
     rewrites absolute paths into relative paths before computing the hash that
     identifies the compilation, but only for paths under the specified
     directory. If set to the empty string (which is the default), no rewriting
-    is done. See also the discussion under
-    <a href="#_compiling_in_different_directories">COMPILING IN DIFFERENT DIRECTORIES</a>.
-    If using GCC or newer versions of Clang, you might want to look into the
-    <strong>-fdebug-prefix-map=old=new</strong> option for relocating debug info to a common
-    prefix (mapping prefix with old=new).
+    is done. A typical path to use as the base directory is your home directory
+    or another directory that is a parent of your build directories. Don&#8217;t use
+    <code>/</code> as the base directory since that will make ccache also rewrite paths to
+    system header files, which doesn&#8217;t gain anything.
 </p>
+<div class="paragraph"><p>See also the discussion under <a href="#_compiling_in_different_directories">COMPILING IN DIFFERENT DIRECTORIES</a>.</p></div>
 </dd>
 <dt class="hdlist1">
 <strong>cache_dir</strong> (<strong>CCACHE_DIR</strong>)
@@ -1283,14 +1280,39 @@ the <strong>prefix_command</strong> setting if possible. See
 <dd>
 <p>
     If true, ccache will attempt to use hard links from the cache directory
-    when creating the compiler output rather than using a file copy. Using hard
-    links may be slightly faster in some situations, but can confuse programs
-    like &#8220;make&#8221; that rely on modification times. Another thing to keep in
-    mind is that if the resulting object file is modified in any way, this
-    corrupts the cached object file as well. Hard links are never made for
-    compressed cache files. This means that you should not enable compression
-    if you want to use hard links. The default is false.
+    when creating the compiler output rather than using a file copy. Hard links
+    are never made for compressed cache files. This means that you should not
+    enable compression if you want to use hard links. The default is false.
 </p>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">Do not enable this option unless you are aware of the consequences.
+Using hard links may be slightly faster in some situations, but there are
+several pitfalls since the resulting object file will share i-node with the
+cached object file:</td>
+</tr></table>
+</div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+If the resulting object file is modified in any way, the cached object file
+   will be modified as well. For instance, if you run <strong>strip object.o</strong> or <strong>echo
+   &gt;object.o</strong>, you will corrupt the cache.
+</p>
+</li>
+<li>
+<p>
+Programs that rely on modification times (like &#8220;make&#8221;) can be confused
+   since ccache updates the cached files' modification times as part of the
+   automatic cache size management. This will affect object files in the build
+   tree as well, which can retrigger the linking step even though nothing
+   really has changed.
+</p>
+</li>
+</ol></div>
 </dd>
 <dt class="hdlist1">
 <strong>hash_dir</strong> (<strong>CCACHE_HASHDIR</strong> or <strong>CCACHE_NOHASHDIR</strong>, see <a href="#_boolean_values">Boolean values</a> above)
@@ -1302,6 +1324,8 @@ the <strong>prefix_command</strong> setting if possible. See
     when generating debug info (compiler option <strong>-g</strong> with variations).
     Exception: The CWD will not be included in the hash if <strong>base_dir</strong> is set
     (and matches the CWD) and the compiler option <strong>-fdebug-prefix-map</strong> is used.
+    See also the discussion under
+    <a href="#_compiling_in_different_directories">COMPILING IN DIFFERENT DIRECTORIES</a>.
 </p>
 <div class="paragraph"><p>The reason for including the CWD in the hash by default is to prevent a problem
 with the storage of the current working directory in the debug info of an
@@ -1449,6 +1473,12 @@ of the original source code. This makes cache misses slightly faster since the
 source code only has to be preprocessed once. The downside is that some
 compilers won&#8217;t produce the same result (for instance diagnostics warnings)
 when compiling preprocessed source code.</p></div>
+<div class="paragraph"><p>A solution to the above mentioned downside is to set <strong>run_second_cpp</strong> to false
+and pass <strong>-fdirectives-only</strong> (for GCC) or <strong>-frewrite-includes</strong> (for Clang) to
+the compiler. This will cause the compiler to leave the macros and other
+preprocessor information, and only process the <strong>#include</strong> directives. When run
+in this way, the preprocessor arguments will be passed to the compiler since it
+still has to do <em>some</em> preprocessing (like macros).</p></div>
 </dd>
 <dt class="hdlist1">
 <strong>sloppiness</strong> (<strong>CCACHE_SLOPPINESS</strong>)
@@ -1584,8 +1614,7 @@ information.</p></div>
     unifier changes the hash, so cached compilations produced when the unifier
     is enabled cannot be reused when the unifier is disabled, and vice versa.
     Enabling the unifier may result in incorrect line number information in
-    compiler warning messages and expansions of the <strong>__LINE__</strong> macro. Also
-    note that enabling the unifier implies turning off the direct mode.
+    compiler warning messages and expansions of the <strong>__LINE__</strong> macro.
 </p>
 </dd>
 </dl></div>
@@ -1933,11 +1962,6 @@ a modification time of one of the include files is too new (needed to avoid a
 </li>
 <li>
 <p>
-the unifier is enabled (the configuration setting <strong>unify</strong> is true)
-</p>
-</li>
-<li>
-<p>
 a compiler option not supported by the direct mode is used:
 </p>
 <div class="ulist"><ul>
@@ -1991,7 +2015,7 @@ the cache.</p></div>
 <div class="sect1">
 <h2 id="_compiling_in_different_directories">Compiling in different directories</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Some information included in the hash that identifies a unique compilation may
+<div class="paragraph"><p>Some information included in the hash that identifies a unique compilation can
 contain absolute paths:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2003,8 +2027,8 @@ The preprocessed source code may contain absolute paths to include files if
 </li>
 <li>
 <p>
-Paths specified by compiler options (such as <strong>-I</strong>, <strong>-MF</strong>, etc) may be
-  absolute.
+Paths specified by compiler options (such as <strong>-I</strong>, <strong>-MF</strong>, etc) on the command
+  line may be absolute.
 </p>
 </li>
 <li>
@@ -2018,29 +2042,39 @@ The source code file path may be absolute, and that path may substituted for
 <div class="paragraph"><p>This means that if you compile the same code in different locations, you can&#8217;t
 share compilation results between the different build directories since you get
 cache misses because of the absolute build directory paths that are part of the
-hash. To mitigate this problem, you can specify a &#8220;base directory&#8221; in the
-configuration setting <strong>base_dir</strong> to an absolute path to the directory. ccache
-will then rewrite absolute paths that are under the base directory (i.e., paths
-that have the base directory as a prefix) to relative paths when constructing
-the hash. A typical path to use as the base directory is your home directory or
-another directory that is a parent of your build directories. (Don&#8217;t use <code>/</code> as
-the base directory since that will make ccache also rewrite paths to system
-header files, which doesn&#8217;t gain anything.)</p></div>
-<div class="paragraph"><p>The drawbacks of using a base directory are:</p></div>
+hash.</p></div>
+<div class="paragraph"><p>Here&#8217;s what can be done to enable cache hits between different build
+directories:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-If you specify an absolute path to the source code file, <strong>__FILE__</strong> macros
-  will be expanded to a relative path instead.
+If you build with <strong>-g</strong> (or similar) to add debug information to the object
+  file, you must either:
+</p>
+<div class="openblock">
+<div class="content">
+<div class="ulist"><ul>
+<li>
+<p>
+use the <strong>-fdebug-prefix-map=<em>old</em>=<em>new</em></strong> option for relocating debug info to
+   a common prefix (e.g. <strong>-fdebug-prefix-map=$PWD=.</strong>); or
 </p>
 </li>
 <li>
 <p>
-If you specify an absolute path to the source code file and compile with
-  <strong>-g</strong>, the source code path stored in the object file may point to the wrong
-  directory, which may prevent debuggers like GDB from finding the source code.
-  Sometimes, a work-around is to change the directory explicitly with the
-  &#8220;cd&#8221; command in GDB.
+set <strong>hash_dir = false</strong>.
+</p>
+</li>
+</ul></div>
+</div></div>
+</li>
+<li>
+<p>
+If you use absolute paths anywhere on the command line (e.g. the source code
+  file path or an argument to compiler options like <strong>-I</strong> and <strong>-MF</strong>), you must
+  to set <strong>base_dir</strong> to an absolute path to a &#8220;base directory&#8221;. ccache will
+  then rewrite absolute paths under that directory to relative before computing
+  the hash.
 </p>
 </li>
 </ul></div>
@@ -2220,6 +2254,27 @@ invoke the other wrapper when doing preprocessing (normally by adding <strong>-E
 <p>
 The direct mode fails to pick up new header files in some rare scenarios. See
   <a href="#_the_direct_mode">THE DIRECT MODE</a> above.
+</p>
+</li>
+<li>
+<p>
+When run via ccache, warning messages produced by GCC 4.9 and newer will only
+  be colored when the environment variable <strong>GCC_COLORS</strong> is set. An alternative
+  to setting <strong>GCC_COLORS</strong> is to pass <code>-fdiagnostics-color</code> explicitly when
+  compiling (but then color codes will also be present when redirecting stderr
+  to a file).
+</p>
+</li>
+<li>
+<p>
+If ccache guesses that the compiler may emit colored warnings, then a
+  compilation with stderr referring to a TTY will be considered different from
+  a compilation with a redirected stderr, thus not sharing cache entries. This
+  happens for clang by default and for GCC when <strong>GCC_COLORS</strong> is set as
+  mentioned above. If you want to share cache hits, you can pass
+  <code>-f[no-]diagnostics-color</code> (GCC) or <code>-f[no-]color-diagnostics</code> (clang)
+  explicitly when compiling (but then color codes will be either on or off for
+  both the TTY and the redirected case).
 </p>
 </li>
 </ul></div>
@@ -2419,9 +2474,9 @@ maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.3.5<br />
+Version 3.4.1<br />
 Last updated
- 2018-01-13 17:47:38 CET
+ 2018-02-06 21:44:11 CET
 </div>
 </div>
 </body>

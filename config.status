@@ -433,7 +433,7 @@ Copyright (C) 2012 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/root/tmp/prebuilts_misc_linux32_ccache'
+ac_pwd='/root/tmp'
 srcdir='.'
 INSTALL='/usr/bin/install -c'
 test -n "$AWK" || AWK=awk
@@ -606,6 +606,7 @@ S["LTLIBOBJS"]=""
 S["LIBOBJS"]=""
 S["EGREP"]="/bin/grep -E"
 S["GREP"]="/bin/grep"
+S["BASH"]="/bin/bash"
 S["AR"]="ar"
 S["RANLIB"]="ranlib"
 S["INSTALL_DATA"]="${INSTALL} -m 644"
@@ -619,18 +620,18 @@ S["CPPFLAGS"]=""
 S["LDFLAGS"]=""
 S["CFLAGS"]="-g -O2 -Wall -W"
 S["CC"]="gcc"
-S["test_suites"]="./test/test_args.c ./test/test_argument_processing.c ./test/test_compopt.c ./test/test_conf.c ./test/test_counters.c ./test/test_hash.c ./test/test_"\
-"hashutil.c ./test/test_lockfile.c ./test/test_stats.c ./test/test_util.c"
+S["test_suites"]="./unittest/test_args.c ./unittest/test_argument_processing.c ./unittest/test_compopt.c ./unittest/test_conf.c ./unittest/test_counters.c ./unittest/"\
+"test_hash.c ./unittest/test_hashutil.c ./unittest/test_lockfile.c ./unittest/test_stats.c ./unittest/test_util.c"
 S["include_dev_mk"]=""
 S["extra_libs"]=""
 S["host_os"]="linux-gnu"
-S["host_vendor"]="unknown"
+S["host_vendor"]="pc"
 S["host_cpu"]="x86_64"
-S["host"]="x86_64-unknown-linux-gnu"
+S["host"]="x86_64-pc-linux-gnu"
 S["build_os"]="linux-gnu"
-S["build_vendor"]="unknown"
+S["build_vendor"]="pc"
 S["build_cpu"]="x86_64"
-S["build"]="x86_64-unknown-linux-gnu"
+S["build"]="x86_64-pc-linux-gnu"
 S["target_alias"]=""
 S["host_alias"]=""
 S["build_alias"]=""

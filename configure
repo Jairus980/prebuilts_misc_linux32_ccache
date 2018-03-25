@@ -623,6 +623,7 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 EGREP
 GREP
+BASH
 AR
 RANLIB
 INSTALL_DATA
@@ -3896,6 +3897,106 @@ if test -z "$AR"; then
     as_fn_error $? "cannot find ar" "$LINENO" 5
 fi
 
+# Prefer bash, needed for test.sh
+if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}bash", so it can be a program name with args.
+set dummy ${ac_tool_prefix}bash; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_BASH+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $BASH in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_BASH="$BASH" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_BASH="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+BASH=$ac_cv_path_BASH
+if test -n "$BASH"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $BASH" >&5
+$as_echo "$BASH" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_BASH"; then
+  ac_pt_BASH=$BASH
+  # Extract the first word of "bash", so it can be a program name with args.
+set dummy bash; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_BASH+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_BASH in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_BASH="$ac_pt_BASH" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_BASH="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_BASH=$ac_cv_path_ac_pt_BASH
+if test -n "$ac_pt_BASH"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_BASH" >&5
+$as_echo "$ac_pt_BASH" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_BASH" = x; then
+    BASH=""/bin/bash""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    BASH=$ac_pt_BASH
+  fi
+else
+  BASH="$ac_cv_path_BASH"
+fi
+
+
 # If GCC, turn on warnings.
 if test "x$GCC" = "xyes"; then
     CFLAGS="$CFLAGS -Wall -W"
@@ -5776,7 +5877,7 @@ $as_echo "$as_me: using bundled zlib as requested" >&6;}
 fi
 
 if test x${use_bundled_zlib} = xyes; then
-    CPPFLAGS="$CPPFLAGS -I\$(srcdir)/zlib"
+    CPPFLAGS="$CPPFLAGS -I\$(srcdir)/src/zlib"
     extra_libs="zlib/libz.a"
     mkdir -p zlib
 else
@@ -6110,19 +6211,19 @@ $as_echo "$as_me: Developer mode enabled" >&6;}
 
     include_dev_mk='include dev.mk'
     version=`(git --git-dir=$srcdir/.git describe --dirty 2>/dev/null || echo vunknown) | sed -e 's/v//' -e 's/-/+/' -e 's/-/_/g'`
-    echo "const char CCACHE_VERSION[] = \"$version\";" >version.c
+    echo "const char CCACHE_VERSION[] = \"$version\";" >src/version.c
 else
     { $as_echo "$as_me:${as_lineno-$LINENO}: Developer mode disabled" >&5
 $as_echo "$as_me: Developer mode disabled" >&6;}
 fi
 
-if test ! -f $srcdir/version.c; then
+if test ! -f $srcdir/src/version.c; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unable to determine ccache version" >&5
 $as_echo "$as_me: WARNING: unable to determine ccache version" >&2;}
-    echo "const char CCACHE_VERSION[] = \"unknown\";" >version.c
+    echo "const char CCACHE_VERSION[] = \"unknown\";" >src/version.c
 fi
 
-test_suites=`ls $srcdir/test/test_*.c | egrep -v 'BASE|BACKUP|LOCAL|REMOTE' | xargs echo`
+test_suites=`ls $srcdir/unittest/test_*.c | egrep -v 'BASE|BACKUP|LOCAL|REMOTE' | xargs echo`
 
 ac_config_files="$ac_config_files Makefile"
 
@@ -7415,7 +7516,7 @@ cat config.h >>config.h.tmp
 echo '#endif' >>config.h.tmp
 mv config.h.tmp config.h
 
-mkdir -p .deps test
+mkdir -p .deps src unittest
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: now build ccache by running make" >&5
