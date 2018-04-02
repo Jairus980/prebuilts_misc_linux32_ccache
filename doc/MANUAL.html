@@ -734,7 +734,7 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.4.1</span>
+<span id="revnumber">version 3.4.2</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -883,7 +883,7 @@ a compiler (via a symlink as described in the previous section), the normal
 compiler options apply and you should refer to the compiler&#8217;s documentation.</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
-<strong>-c, --cleanup</strong>
+<strong><code>-c, --cleanup</code></strong>
 </dt>
 <dd>
 <p>
@@ -897,7 +897,7 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>-C, --clear</strong>
+<strong><code>-C, --clear</code></strong>
 </dt>
 <dd>
 <p>
@@ -906,7 +906,7 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>-F, --max-files</strong>=<em>N</em>
+<strong><code>-F, --max-files</code></strong>=<em>N</em>
 </dt>
 <dd>
 <p>
@@ -916,7 +916,7 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>-h, --help</strong>
+<strong><code>-h, --help</code></strong>
 </dt>
 <dd>
 <p>
@@ -924,7 +924,7 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>-M, --max-size</strong>=<em>SIZE</em>
+<strong><code>-M, --max-size</code></strong>=<em>SIZE</em>
 </dt>
 <dd>
 <p>
@@ -936,7 +936,7 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>-o, --set-config</strong>=<em>KEY=VALUE</em>
+<strong><code>-o, --set-config</code></strong>=<em>KEY=VALUE</em>
 </dt>
 <dd>
 <p>
@@ -945,7 +945,7 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>-p, --print-config</strong>
+<strong><code>-p, --print-config</code></strong>
 </dt>
 <dd>
 <p>
@@ -954,7 +954,7 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>-s, --show-stats</strong>
+<strong><code>-s, --show-stats</code></strong>
 </dt>
 <dd>
 <p>
@@ -962,7 +962,7 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>-V, --version</strong>
+<strong><code>-V, --version</code></strong>
 </dt>
 <dd>
 <p>
@@ -970,7 +970,7 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>-z, --zero-stats</strong>
+<strong><code>-z, --zero-stats</code></strong>
 </dt>
 <dd>
 <p>
@@ -1026,13 +1026,13 @@ Environment variables.
 </li>
 <li>
 <p>
-The cache-specific configuration file <strong>&lt;ccachedir&gt;/ccache.conf</strong> (typically
+The cache-specific configuration file <strong><em>&lt;ccachedir&gt;</em>/ccache.conf</strong> (typically
    <strong>$HOME/.ccache/ccache.conf</strong>).
 </p>
 </li>
 <li>
 <p>
-The system-wide configuration file <strong>&lt;sysconfdir&gt;/ccache.conf</strong> (typically
+The system-wide configuration file <strong><em>&lt;sysconfdir&gt;</em>/ccache.conf</strong> (typically
    <strong>/etc/ccache.conf</strong> or <strong>/usr/local/etc/ccache.conf</strong>).
 </p>
 </li>
@@ -1299,8 +1299,8 @@ cached object file:</td>
 <li>
 <p>
 If the resulting object file is modified in any way, the cached object file
-   will be modified as well. For instance, if you run <strong>strip object.o</strong> or <strong>echo
-   &gt;object.o</strong>, you will corrupt the cache.
+   will be modified as well. For instance, if you run <code>strip object.o</code> or <code>echo
+   &gt;object.o</code>, you will corrupt the cache.
 </p>
 </li>
 <li>
@@ -1392,7 +1392,7 @@ might be incorrect.</p></div>
 <p>
     This option specifies the maximum size of the cache. Use 0 for no limit.
     The default value is 5G. Available suffixes: k, M, G, T (decimal) and Ki,
-    Mi, Gi, Ti (binary). The default suffix is "G". See also
+    Mi, Gi, Ti (binary). The default suffix is G. See also
     <a href="#_cache_size_management">CACHE SIZE MANAGEMENT</a>.
 </p>
 </dd>
@@ -1499,7 +1499,7 @@ still has to do <em>some</em> preprocessing (like macros).</p></div>
 </dt>
 <dd>
 <p>
-    Ignore <strong>__FILE__</strong> being present in the source.
+    Ignore <code>__FILE__</code> being present in the source.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1554,7 +1554,7 @@ still has to do <em>some</em> preprocessing (like macros).</p></div>
 </dt>
 <dd>
 <p>
-    Ignore <strong>__DATE__</strong> and <strong>__TIME__</strong> being present in the source code.
+    Ignore <code>__DATE__</code> and <code>__TIME__</code> being present in the source code.
 </p>
 </dd>
 </dl></div>
@@ -1614,7 +1614,7 @@ information.</p></div>
     unifier changes the hash, so cached compilations produced when the unifier
     is enabled cannot be reused when the unifier is disabled, and vice versa.
     Enabling the unifier may result in incorrect line number information in
-    compiler warning messages and expansions of the <strong>__LINE__</strong> macro.
+    compiler warning messages and expansions of the <code>__LINE__</code> macro.
 </p>
 </dd>
 </dl></div>
@@ -1819,7 +1819,7 @@ node).</p></td>
 </tr>
 <tr>
 <td align="left" valign="top"><p class="table">unsupported code directive</p></td>
-<td align="left" valign="top"><p class="table">Code like the assembler &#8220;.incbin&#8221; directive was found. This is not supported
+<td align="left" valign="top"><p class="table">Code like the assembler <strong>.incbin</strong> directive was found. This is not supported
 by ccache.</p></td>
 </tr>
 <tr>
@@ -1980,7 +1980,7 @@ a <strong>-Wp,<em>X</em></strong> compiler option other than <strong>-Wp,-MD,<em
 </li>
 <li>
 <p>
-the string &#8220;__TIME__&#8221; is present in the source code
+the string <code>__TIME__</code> is present in the source code
 </p>
 </li>
 </ul></div>
@@ -2034,7 +2034,7 @@ Paths specified by compiler options (such as <strong>-I</strong>, <strong>-MF</s
 <li>
 <p>
 The source code file path may be absolute, and that path may substituted for
-  <strong>__FILE__</strong> macros in the source code or included in warnings emitted to
+  <code>__FILE__</code> macros in the source code or included in warnings emitted to
   standard error by the preprocessor.
 </p>
 </li>
@@ -2089,7 +2089,7 @@ things to make it work properly:</p></div>
 <li>
 <p>
 You must set <strong>sloppiness</strong> to <strong>pch_defines,time_macros</strong>. The reason is that
-  ccache can&#8217;t tell whether <strong>__TIME__</strong> or <strong>__DATE__</strong> is used when using a
+  ccache can&#8217;t tell whether <code>__TIME__</code> or <code>__DATE__</code> is used when using a
   precompiled header. Further, it can&#8217;t detect changes in <strong>#define</strong>s in the
   source code because of how preprocessing works in combination with
   precompiled headers.
@@ -2349,37 +2349,36 @@ A modification time of one of the include files is too new (created the same
 </li>
 <li>
 <p>
-The <strong>__TIME__</strong> preprocessor macro is (potentially) being used. ccache
-   turns off direct mode if &#8220;__TIME__&#8221; is present in the source code. This
-   is done as a safety measure since the string indicates that a <strong>__TIME__</strong>
-   macro <em>may</em> affect the output. (To be sure, ccache would have to run the
-   preprocessor, but the sole point of the direct mode is to avoid that.) If
-   you know that <strong>__TIME__</strong> isn&#8217;t used in practise, or don&#8217;t care if ccache
-   produces objects where <strong>__TIME__</strong> is expanded to something in the past,
-   you can set <strong>sloppiness</strong> to <strong>time_macros</strong>.
+The <code>__TIME__</code> preprocessor macro is (potentially) being used. ccache turns
+   off direct mode if <code>__TIME__</code> is present in the source code. This is done as
+   a safety measure since the string indicates that a <code>__TIME__</code> macro <em>may</em>
+   affect the output. (To be sure, ccache would have to run the preprocessor,
+   but the sole point of the direct mode is to avoid that.) If you know that
+   <code>__TIME__</code> isn&#8217;t used in practise, or don&#8217;t care if ccache produces objects
+   where <code>__TIME__</code> is expanded to something in the past, you can set
+   <strong>sloppiness</strong> to <strong>time_macros</strong>.
 </p>
 </li>
 <li>
 <p>
-The <strong>__DATE__</strong> preprocessor macro is (potentially) being used and the
-   date has changed. This is similar to how <strong>__TIME__</strong> is handled. If
-   &#8220;__DATE__&#8221; is present in the source code, ccache hashes the current
-   date in order to be able to produce the correct object file if the
-   <strong>__DATE__</strong> macro affects the output. If you know that <strong>__DATE__</strong> isn&#8217;t
-   used in practise, or don&#8217;t care if ccache produces objects where
-   <strong>__DATE__</strong> is expanded to something in the past, you can set <strong>sloppiness</strong>
-   to <strong>time_macros</strong>.
+The <code>__DATE__</code> preprocessor macro is (potentially) being used and the date
+   has changed. This is similar to how <code>__TIME__</code> is handled. If <code>__DATE__</code> is
+   present in the source code, ccache hashes the current date in order to be
+   able to produce the correct object file if the <code>__DATE__</code> macro affects the
+   output. If you know that <code>__DATE__</code> isn&#8217;t used in practise, or don&#8217;t care if
+   ccache produces objects where <code>__DATE__</code> is expanded to something in the
+   past, you can set <strong>sloppiness</strong> to <strong>time_macros</strong>.
 </p>
 </li>
 <li>
 <p>
-The <strong>__FILE__</strong> preprocessor macro is (potentially) being used and the
-   file path has changed. If &#8220;__FILE__&#8221; is present in the source code,
-   ccache hashes the current input file path in order to be able to produce the
-   correct object file if the <strong>__FILE__</strong> macro affects the output. If you
-   know that <strong>__FILE__</strong> isn&#8217;t used in practise, or don&#8217;t care if ccache
-   produces objects where <strong>__FILE__</strong> is expanded to the wrong path, you can
-   set <strong>sloppiness</strong> to <strong>file_macro</strong>.
+The <code>__FILE__</code> preprocessor macro is (potentially) being used and the file
+   path has changed. If <code>__FILE__</code> is present in the source code, ccache hashes
+   the current input file path in order to be able to produce the correct
+   object file if the <code>__FILE__</code> macro affects the output. If you know that
+   <code>__FILE__</code> isn&#8217;t used in practise, or don&#8217;t care if ccache produces objects
+   where <code>__FILE__</code> is expanded to the wrong path, you can set <strong>sloppiness</strong> to
+   <strong>file_macro</strong>.
 </p>
 </li>
 </ul></div>
@@ -2390,8 +2389,8 @@ If &#8220;cache miss&#8221; has been incremented even though the same code has b
   compiled and cached before, ccache has either detected that something has
   changed anyway or a cleanup has been performed (either explicitly or
   implicitly when a cache limit has been reached). Some perhaps unobvious
-  things that may result in a cache miss are usage of <strong>__TIME__</strong> or
-  <strong>__DATE__</strong> macros, or use of automatically generated code that contains a
+  things that may result in a cache miss are usage of <code>__TIME__</code> or
+  <code>__DATE__</code> macros, or use of automatically generated code that contains a
   timestamp, build counter or other volatile information.
 </p>
 </li>
@@ -2474,9 +2473,9 @@ maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.4.1<br />
+Version 3.4.2<br />
 Last updated
- 2018-02-06 21:44:11 CET
+ 2018-03-15 21:34:36 CET
 </div>
 </div>
 </body>

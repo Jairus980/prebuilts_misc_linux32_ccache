@@ -2229,8 +2229,8 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: Configuring ccache" >&5
-$as_echo "$as_me: Configuring ccache" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: configuring ccache" >&5
+$as_echo "$as_me: configuring ccache" >&6;}
 
 ac_config_headers="$ac_config_headers config.h"
 
@@ -5878,8 +5878,8 @@ fi
 
 if test x${use_bundled_zlib} = xyes; then
     CPPFLAGS="$CPPFLAGS -I\$(srcdir)/src/zlib"
-    extra_libs="zlib/libz.a"
-    mkdir -p zlib
+    extra_libs="src/zlib/libz.a"
+    mkdir -p src/zlib
 else
     LIBS="$LIBS -lz"
 fi
@@ -6204,26 +6204,28 @@ $as_echo "#define HAVE_EXTERN_INLINE 1" >>confdefs.h
 
 fi
 
+mkdir -p .deps src unittest
+
 if test ! -f $srcdir/dev_mode_disabled && test "$RUN_FROM_BUILD_FARM" != yes; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Developer mode enabled" >&5
-$as_echo "$as_me: Developer mode enabled" >&6;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: developer mode enabled" >&5
+$as_echo "$as_me: developer mode enabled" >&6;}
     ac_config_files="$ac_config_files dev.mk"
 
     include_dev_mk='include dev.mk'
     version=`(git --git-dir=$srcdir/.git describe --dirty 2>/dev/null || echo vunknown) | sed -e 's/v//' -e 's/-/+/' -e 's/-/_/g'`
     echo "const char CCACHE_VERSION[] = \"$version\";" >src/version.c
 else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: Developer mode disabled" >&5
-$as_echo "$as_me: Developer mode disabled" >&6;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: developer mode disabled" >&5
+$as_echo "$as_me: developer mode disabled" >&6;}
 fi
 
-if test ! -f $srcdir/src/version.c; then
+if test ! -f $srcdir/src/version.c -a ! -f src/version.c ; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unable to determine ccache version" >&5
 $as_echo "$as_me: WARNING: unable to determine ccache version" >&2;}
     echo "const char CCACHE_VERSION[] = \"unknown\";" >src/version.c
 fi
 
-test_suites=`ls $srcdir/unittest/test_*.c | egrep -v 'BASE|BACKUP|LOCAL|REMOTE' | xargs echo`
+test_suites=`cd $srcdir && ls unittest/test_*.c | egrep -v 'BASE|BACKUP|LOCAL|REMOTE' | xargs echo`
 
 ac_config_files="$ac_config_files Makefile"
 
@@ -7515,9 +7517,6 @@ EOF
 cat config.h >>config.h.tmp
 echo '#endif' >>config.h.tmp
 mv config.h.tmp config.h
-
-mkdir -p .deps src unittest
-
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: now build ccache by running make" >&5
 $as_echo "$as_me: now build ccache by running make" >&6;}

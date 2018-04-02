@@ -39,6 +39,9 @@ PATH: /mnt/c/Windows
 PATH: /mnt/c/Windows
 PATH: /mnt/c/Windows
 PATH: /mnt/c/Windows
+PATH: /mnt/c/Windows
+PATH: /mnt/c/Windows
+PATH: /mnt/c/Windows
 PATH: /mnt/c/Python27
 PATH: /mnt/c/Python27/Scripts
 PATH: /mnt/c/ProgramData/Oracle/Java/javapath_target_8037859
@@ -57,7 +60,7 @@ PATH: /snap/bin
 ## Core tests. ##
 ## ----------- ##
 
-configure:2232: Configuring ccache
+configure:2232: configuring ccache
 configure:2271: checking build system type
 configure:2285: result: x86_64-pc-linux-gnu
 configure:2305: checking host system type
@@ -583,8 +586,8 @@ configure:5762: gcc -o conftest -g -O2 -Wall -W   conftest.c  >&5
 conftest.c:63:6: warning: conflicting types for built-in function 'cos'
  char cos ();
       ^
-/tmp/cc4nlXZ2.o: In function `main':
-/root/tmp/conftest.c:67: undefined reference to `cos'
+/tmp/ccELaBdI.o: In function `main':
+/root/tmp/prebuilts_misc_linux32_ccache/conftest.c:67: undefined reference to `cos'
 collect2: error: ld returned 1 exit status
 configure:5762: $? = 1
 configure: failed program was:
@@ -906,8 +909,8 @@ configure: failed program was:
 |   return 0;
 | }
 configure:6199: result: no
-configure:6216: Developer mode disabled
-configure:6345: creating ./config.status
+configure:6218: developer mode disabled
+configure:6347: creating ./config.status
 
 ## ---------------------- ##
 ## Running config.status. ##
@@ -926,7 +929,7 @@ on 80XL
 
 config.status:855: creating Makefile
 config.status:855: creating config.h
-configure:7522: now build ccache by running make
+configure:7521: now build ccache by running make
 
 ## ---------------- ##
 ## Cache variables. ##
@@ -1087,7 +1090,7 @@ sbindir='${exec_prefix}/sbin'
 sharedstatedir='${prefix}/com'
 sysconfdir='${prefix}/etc'
 target_alias=''
-test_suites='./unittest/test_args.c ./unittest/test_argument_processing.c ./unittest/test_compopt.c ./unittest/test_conf.c ./unittest/test_counters.c ./unittest/test_hash.c ./unittest/test_hashutil.c ./unittest/test_lockfile.c ./unittest/test_stats.c ./unittest/test_util.c'
+test_suites='unittest/test_args.c unittest/test_argument_processing.c unittest/test_compopt.c unittest/test_conf.c unittest/test_counters.c unittest/test_hash.c unittest/test_hashutil.c unittest/test_lockfile.c unittest/test_stats.c unittest/test_util.c'
 
 ## ----------- ##
 ## confdefs.h. ##
