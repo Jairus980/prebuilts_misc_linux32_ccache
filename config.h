@@ -1,5 +1,12 @@
 #ifndef CCACHE_CONFIG_H
 #define CCACHE_CONFIG_H
+#ifdef __clang__
+#pragma clang diagnostic push
+#if __clang_major__ >= 4
+#pragma clang diagnostic ignored "-Wreserved-id-macro"
+#endif
+#endif
+
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
@@ -217,13 +224,13 @@
 #define _NETBSD_SOURCE 1
 
 /* Define to activate features from IEEE Stds 1003.1-2001 */
-#define _POSIX_C_SOURCE 200112L
+#define _POSIX_C_SOURCE 200809L
 
 /* Windows Vista or newer is required */
 /* #undef _WIN32_WINNT */
 
 /* Define to the level of X/Open that your system supports */
-#define _XOPEN_SOURCE 600
+#define _XOPEN_SOURCE 700
 
 /* Define to activate Unix95-and-earlier features */
 #define _XOPEN_SOURCE_EXTENDED 1
@@ -257,4 +264,8 @@
 /* Define to the type of an unsigned integer type wide enough to hold a
    pointer, if such a type exists, and if the system does not define it. */
 /* #undef uintptr_t */
+
+#ifdef __clang__
+#pragma clang diagnostic pop
 #endif
+#endif // ifndef CCACHE_CONFIG_H

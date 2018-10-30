@@ -433,7 +433,7 @@ Copyright (C) 2012 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/root/tmp/prebuilts_misc_linux32_ccache'
+ac_pwd='/root/tmp/ccache'
 srcdir='.'
 INSTALL='/usr/bin/install -c'
 test -n "$AWK" || AWK=awk
@@ -620,9 +620,12 @@ S["CPPFLAGS"]=""
 S["LDFLAGS"]=""
 S["CFLAGS"]="-g -O2 -Wall -W"
 S["CC"]="gcc"
+S["disable_man"]=""
 S["test_suites"]="unittest/test_args.c unittest/test_argument_processing.c unittest/test_compopt.c unittest/test_conf.c unittest/test_counters.c unittest/test_hash.c "\
 "unittest/test_hashutil.c unittest/test_lockfile.c unittest/test_stats.c unittest/test_util.c"
 S["include_dev_mk"]=""
+S["getopt_long_c"]=""
+S["no_implicit_fallthrough_warning"]="-Wno-implicit-fallthrough"
 S["extra_libs"]=""
 S["host_os"]="linux-gnu"
 S["host_vendor"]="pc"
@@ -723,9 +726,9 @@ D["_NETBSD_SOURCE"]=" 1"
 D["__BSD_VISIBLE"]=" 1"
 D["_BSD_TYPES"]=" 1"
 D["_DARWIN_C_SOURCE"]=" 1"
-D["_XOPEN_SOURCE"]=" 600"
+D["_XOPEN_SOURCE"]=" 700"
 D["_XOPEN_SOURCE_EXTENDED"]=" 1"
-D["_POSIX_C_SOURCE"]=" 200112L"
+D["_POSIX_C_SOURCE"]=" 200809L"
 D["HAVE_DIRENT_H"]=" 1"
 D["TIME_WITH_SYS_TIME"]=" 1"
 D["HAVE_SYS_WAIT_H"]=" 1"

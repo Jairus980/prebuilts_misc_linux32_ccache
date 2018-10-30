@@ -12,6 +12,7 @@ struct conf {
 	bool compression;
 	unsigned compression_level;
 	char *cpp_extension;
+	bool debug;
 	bool direct_mode;
 	bool disable;
 	char *extra_files_to_hash;
@@ -24,6 +25,7 @@ struct conf {
 	unsigned max_files;
 	uint64_t max_size;
 	char *path;
+	bool pch_external_checksum;
 	char *prefix_command;
 	char *prefix_command_cpp;
 	bool read_only;
@@ -43,6 +45,8 @@ struct conf *conf_create(void);
 void conf_free(struct conf *conf);
 bool conf_read(struct conf *conf, const char *path, char **errmsg);
 bool conf_update_from_environment(struct conf *conf, char **errmsg);
+bool conf_print_value(struct conf *conf, const char *key,
+                      FILE *file, char **errmsg);
 bool conf_set_value_in_file(const char *path, const char *key,
                             const char *value, char **errmsg);
 bool conf_print_items(struct conf *conf,

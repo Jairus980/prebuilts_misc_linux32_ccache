@@ -1,1 +1,1 @@
-const char CCACHE_VERSION[] = "3.4.2";
+extern const char CCACHE_VERSION[]; const char CCACHE_VERSION[] = "3.5";
