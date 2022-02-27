@@ -2,7 +2,7 @@
 #define CCACHE_CONFIG_H
 #ifdef __clang__
 #pragma clang diagnostic push
-#if __clang_major__ >= 4
+#if __has_warning("-Wreserved-id-macro")
 #pragma clang diagnostic ignored "-Wreserved-id-macro"
 #endif
 #endif
@@ -29,9 +29,6 @@
 /* Define to 1 if your compiler supports extern inline */
 /* #undef HAVE_EXTERN_INLINE */
 
-/* Define to 1 if you have the `GetFinalPathNameByHandleW' function. */
-/* #undef HAVE_GETFINALPATHNAMEBYHANDLEW */
-
 /* Define to 1 if you have the `gethostname' function. */
 #define HAVE_GETHOSTNAME 1
 
@@ -56,6 +53,9 @@
 /* Define to 1 if you have the <locale.h> header file. */
 /* #undef HAVE_LOCALE_H */
 
+/* Define to 1 if you have the `localtime_r' function. */
+#define HAVE_LOCALTIME_R 1
+
 /* Define to 1 if the system has the type `long long'. */
 #define HAVE_LONG_LONG 1
 
@@ -79,6 +79,9 @@
 
 /* Define to 1 if you have the `realpath' function. */
 #define HAVE_REALPATH 1
+
+/* Define to 1 if you have the `setenv' function. */
+#define HAVE_SETENV 1
 
 /* Define to 1 if you have a C99 compliant `snprintf' function. */
 #define HAVE_SNPRINTF 1

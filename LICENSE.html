@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.10" />
+<meta name="generator" content="AsciiDoc 9.0.0rc1" />
 <title>ccache copyright and license</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -436,7 +436,7 @@ thead, p.table.header {
 p.table {
   margin-top: 0;
 }
-/* Because the table frame attribute is overriden by CSS in most browsers. */
+/* Because the table frame attribute is overridden by CSS in most browsers. */
 div.tableblock > table[frame="void"] {
   border-style: none;
 }
@@ -735,7 +735,7 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>ccache copyright and license</h1>
-<span id="revnumber">version 3.5</span>
+<span id="revnumber">version 3.7.12</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -769,15 +769,15 @@ asciidoc.install(2);
 <h2 id="_copyright_and_authors">Copyright and authors</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>ccache is a collective work with contributions from many people, listed in
-AUTHORS.adoc and at <a href="https://ccache.samba.org/authors.html">https://ccache.samba.org/authors.html</a>. Subsequent additions
-by contributing authors are implicitly licensed to the public under the same
-terms (GNU GPL version 3 or later), but the contributing authors retain
-copyrights on their portions of the work.</p></div>
+AUTHORS.adoc and at <a href="https://ccache.dev/credits.html">https://ccache.dev/credits.html</a>. Subsequent additions by
+contributing authors are implicitly licensed to the public under the same terms
+(GNU GPL version 3 or later), but the contributing authors retain copyrights on
+their portions of the work.</p></div>
 <div class="paragraph"><p>The copyright for ccache as a whole is as follows:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>  Copyright (C) 2002-2007 Andrew Tridgell
-  Copyright (C) 2009-2018 Joel Rosdahl</code></pre>
+  Copyright (C) 2009-2020 Joel Rosdahl</code></pre>
 </div></div>
 </div>
 </div>
@@ -1150,6 +1150,35 @@ following license:</p></div>
 Appleby. See <a href="http://murmurhash.googlepages.com">http://murmurhash.googlepages.com</a>.</p></div>
 </div>
 <div class="sect2">
+<h3 id="_src_minitrace_hc">src/minitrace.[hc]</h3>
+<div class="paragraph"><p>A library for producing JSON traces suitable for Chrome&#8217;s built-in trace viewer
+(chrome://tracing). Downloaded from <a href="https://github.com/hrydgard/minitrace">https://github.com/hrydgard/minitrace</a>.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>The MIT License (MIT)
+
+Copyright (c) 2014 Henrik Rydgård
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.</code></pre>
+</div></div>
+</div>
+<div class="sect2">
 <h3 id="_src_snprintf_c_and_m4_snprintf_m4">src/snprintf.c and m4/snprintf.m4</h3>
 <div class="paragraph"><p>This implementation of <code>snprintf()</code> and similar functions was downloaded from
 <a href="http://www.jhweiss.de/software/snprintf.html">http://www.jhweiss.de/software/snprintf.html</a> and has the following license:</p></div>
@@ -1206,9 +1235,9 @@ following license:</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.5<br />
+Version 3.7.12<br />
 Last updated
- 2018-09-26 22:34:27 CEST
+ 2020-10-01 14:20:15 CEST
 </div>
 </div>
 </body>

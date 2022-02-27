@@ -1,5 +1,5 @@
 // Copyright (C) 2002 Andrew Tridgell
-// Copyright (C) 2009-2018 Joel Rosdahl
+// Copyright (C) 2009-2020 Joel Rosdahl
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
@@ -33,26 +33,33 @@
 #include <tchar.h>
 #endif
 
+// Destination for conf->log_file.
 static FILE *logfile;
-static char *logbuffer;
-static size_t logbufsize;
-static size_t logsize;
 
-#define LOGBUFSIZ 1024
+// Buffer used for logs in conf->debug mode.
+static char *debug_log_buffer;
+
+// Allocated debug_log_buffer size.
+static size_t debug_log_buffer_capacity;
+
+// The amount of log data stored in debug_log_buffer.
+static size_t debug_log_size;
+
+#define DEBUG_LOG_BUFFER_MARGIN 1024
 
 static bool
 init_log(void)
 {
 	extern struct conf *conf;
 
-	if (logbuffer || logfile) {
+	if (debug_log_buffer || logfile) {
 		return true;
 	}
 	assert(conf);
 	if (conf->debug) {
-		logbufsize = LOGBUFSIZ;
-		logbuffer = x_malloc(logbufsize);
-		logsize = 0;
+		debug_log_buffer_capacity = DEBUG_LOG_BUFFER_MARGIN;
+		debug_log_buffer = x_malloc(debug_log_buffer_capacity);
+		debug_log_size = 0;
 	}
 	if (str_eq(conf->log_file, "")) {
 		return conf->debug;
@@ -69,15 +76,15 @@ init_log(void)
 }
 
 static void
-append_log(const char *s, size_t len)
+append_to_debug_log(const char *s, size_t len)
 {
-	assert(logbuffer);
-	if (logsize + len + 1 > logbufsize) {
-		logbufsize = logbufsize + len + 1 + LOGBUFSIZ;
-		logbuffer = x_realloc(logbuffer, logbufsize);
+	assert(debug_log_buffer);
+	if (debug_log_size + len + 1 > debug_log_buffer_capacity) {
+		debug_log_buffer_capacity += len + 1 + DEBUG_LOG_BUFFER_MARGIN;
+		debug_log_buffer = x_realloc(debug_log_buffer, debug_log_buffer_capacity);
 	}
-	memcpy(logbuffer + logsize, s, len);
-	logsize += len;
+	memcpy(debug_log_buffer + debug_log_size, s, len);
+	debug_log_size += len;
 }
 
 static void
@@ -87,15 +94,14 @@ log_prefix(bool log_updated_time)
 #ifdef HAVE_GETTIMEOFDAY
 	if (log_updated_time) {
 		char timestamp[100];
-		struct tm *tm;
+		struct tm tm;
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
-#ifdef __MINGW64_VERSION_MAJOR
-		tm = localtime((time_t *)&tv.tv_sec);
-#else
-		tm = localtime(&tv.tv_sec);
-#endif
-		strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%S", tm);
+		if (localtime_r((time_t *)&tv.tv_sec, &tm) != NULL) {
+			strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%S", &tm);
+		} else {
+			snprintf(timestamp, sizeof(timestamp), "%lu", tv.tv_sec);
+		}
 		snprintf(prefix, sizeof(prefix),
 		         "[%s.%06d %-5d] ", timestamp, (int)tv.tv_usec, (int)getpid());
 	}
@@ -105,8 +111,8 @@ log_prefix(bool log_updated_time)
 	if (logfile) {
 		fputs(prefix, logfile);
 	}
-	if (logbuffer) {
-		append_log(prefix, strlen(prefix));
+	if (debug_log_buffer) {
+		append_to_debug_log(prefix, strlen(prefix));
 	}
 }
 
@@ -156,11 +162,13 @@ vlog(const char *format, va_list ap, bool log_updated_time)
 			warn_log_fail();
 		}
 	}
-	if (logbuffer) {
-		char buf[1024];
-		size_t len = vsnprintf(buf, sizeof(buf), format, aq);
-		append_log(buf, len);
-		append_log("\n", 1);
+	if (debug_log_buffer) {
+		char buf[8192];
+		int len = vsnprintf(buf, sizeof(buf), format, aq);
+		if (len >= 0) {
+			append_to_debug_log(buf, MIN((size_t)len, sizeof(buf) - 1));
+			append_to_debug_log("\n", 1);
+		}
 	}
 	va_end(aq);
 }
@@ -206,22 +214,25 @@ cc_log_argv(const char *prefix, char **argv)
 			warn_log_fail();
 		}
 	}
-	if (logbuffer) {
-		append_log(prefix, strlen(prefix));
+	if (debug_log_buffer) {
+		append_to_debug_log(prefix, strlen(prefix));
 		char *s = format_command(argv);
-		append_log(s, strlen(s));
+		append_to_debug_log(s, strlen(s));
 		free(s);
 	}
 }
 
 // Copy the current log memory buffer to an output file.
-bool
-cc_dump_log_buffer(const char *path)
+void
+cc_dump_debug_log_buffer(const char *path)
 {
 	FILE *file = fopen(path, "w");
-	fwrite(logbuffer, 1, logsize, file);
-	fclose(file);
-	return true;
+	if (file) {
+		(void) fwrite(debug_log_buffer, 1, debug_log_size, file);
+		fclose(file);
+	} else {
+		cc_log("Failed to open %s: %s", path, strerror(errno));
+	}
 }
 
 // Something went badly wrong!
@@ -230,7 +241,7 @@ fatal(const char *format, ...)
 {
 	va_list ap;
 	va_start(ap, format);
-	char msg[1000];
+	char msg[8192];
 	vsnprintf(msg, sizeof(msg), format, ap);
 	va_end(ap);
 
@@ -304,18 +315,16 @@ get_umask(void)
 // whether dest will be compressed, and with which compression level. Returns 0
 // on success and -1 on failure. On failure, errno represents the error.
 int
-copy_file(const char *src, const char *dest, int compress_level)
+copy_file(const char *src,
+          const char *dest,
+          int compress_level,
+          bool via_tmp_file)
 {
-	int fd_out;
+	int fd_out = -1;
+	char *tmp_name = NULL;
 	gzFile gz_in = NULL;
 	gzFile gz_out = NULL;
 	int saved_errno = 0;
-
-	// Open destination file.
-	char *tmp_name = x_strdup(dest);
-	fd_out = create_tmp_fd(&tmp_name);
-	cc_log("Copying %s to %s via %s (%scompressed)",
-	       src, dest, tmp_name, compress_level > 0 ? "" : "un");
 
 	// Open source file.
 	int fd_in = open(src, O_RDONLY | O_BINARY);
@@ -323,6 +332,24 @@ copy_file(const char *src, const char *dest, int compress_level)
 		saved_errno = errno;
 		cc_log("open error: %s", strerror(saved_errno));
 		goto error;
+	}
+
+	// Open destination file.
+	if (via_tmp_file) {
+		tmp_name = x_strdup(dest);
+		fd_out = create_tmp_fd(&tmp_name);
+		cc_log("Copying %s to %s via %s (%scompressed)",
+		       src, dest, tmp_name, compress_level > 0 ? "" : "un");
+	} else {
+		fd_out = open(dest, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0666);
+		if (fd_out == -1) {
+			saved_errno = errno;
+			close(fd_out);
+			errno = saved_errno;
+			return -1;
+		}
+		cc_log("Copying %s to %s (%scompressed)",
+		       src, dest, compress_level > 0 ? "" : "un");
 	}
 
 	gz_in = gzdopen(fd_in, "rb");
@@ -399,8 +426,10 @@ copy_file(const char *src, const char *dest, int compress_level)
 			gzclose(gz_out);
 		}
 		close(fd_out);
-		tmp_unlink(tmp_name);
-		free(tmp_name);
+		if (via_tmp_file) {
+			tmp_unlink(tmp_name);
+			free(tmp_name);
+		}
 		return -1;
 	}
 
@@ -422,13 +451,15 @@ copy_file(const char *src, const char *dest, int compress_level)
 		goto error;
 	}
 
-	if (x_rename(tmp_name, dest) == -1) {
-		saved_errno = errno;
-		cc_log("rename error: %s", strerror(saved_errno));
-		goto error;
-	}
+	if (via_tmp_file) {
+		if (x_rename(tmp_name, dest) == -1) {
+			saved_errno = errno;
+			cc_log("rename error: %s", strerror(saved_errno));
+			goto error;
+		}
 
-	free(tmp_name);
+		free(tmp_name);
+	}
 
 	return 0;
 
@@ -442,8 +473,10 @@ error:
 	if (fd_out != -1) {
 		close(fd_out);
 	}
-	tmp_unlink(tmp_name);
-	free(tmp_name);
+	if (via_tmp_file && tmp_name) {
+		tmp_unlink(tmp_name);
+		free(tmp_name);
+	}
 	errno = saved_errno;
 	return -1;
 }
@@ -452,7 +485,7 @@ error:
 int
 move_file(const char *src, const char *dest, int compress_level)
 {
-	int ret = copy_file(src, dest, compress_level);
+	int ret = copy_file(src, dest, compress_level, true);
 	if (ret != -1) {
 		x_unlink(src);
 	}
@@ -692,9 +725,6 @@ format(const char *format, ...)
 	}
 	va_end(ap);
 
-	if (!*ptr) {
-		fatal("Internal error in format");
-	}
 	return ptr;
 }
 
@@ -779,6 +809,16 @@ x_realloc(void *ptr, size_t size)
 		fatal("x_realloc: Could not allocate %lu bytes", (unsigned long)size);
 	}
 	return p2;
+}
+
+// This is like setenv.
+void x_setenv(const char *name, const char *value)
+{
+#ifdef HAVE_SETENV
+	setenv(name, value, true);
+#else
+	putenv(format("%s=%s", name, value)); // Leak to environment.
+#endif
 }
 
 // This is like unsetenv.
@@ -962,12 +1002,7 @@ file_size(struct stat *st)
 #ifdef _WIN32
 	return (st->st_size + 1023) & ~1023;
 #else
-	size_t size = st->st_blocks * 512;
-	if ((size_t)st->st_size > size) {
-		// Probably a broken stat() call...
-		size = (st->st_size + 1023) & ~1023;
-	}
-	return size;
+	return st->st_blocks * 512;
 #endif
 }
 
@@ -1048,87 +1083,6 @@ parse_size_with_suffix(const char *str, uint64_t *size)
 	return true;
 }
 
-
-#if !defined(HAVE_REALPATH) && \
-  defined(_WIN32) && \
-  !defined(HAVE_GETFINALPATHNAMEBYHANDLEW)
-static BOOL GetFileNameFromHandle(HANDLE file_handle, TCHAR *filename,
-                                  WORD cch_filename)
-{
-	BOOL success = FALSE;
-
-	// Get the file size.
-	DWORD file_size_hi = 0;
-	DWORD file_size_lo = GetFileSize(file_handle, &file_size_hi);
-	if (file_size_lo == 0 && file_size_hi == 0) {
-		// Cannot map a file with a length of zero.
-		return FALSE;
-	}
-
-	// Create a file mapping object.
-	HANDLE file_map =
-		CreateFileMapping(file_handle, NULL, PAGE_READONLY, 0, 1, NULL);
-	if (!file_map) {
-		return FALSE;
-	}
-
-	// Create a file mapping to get the file name.
-	void *mem = MapViewOfFile(file_map, FILE_MAP_READ, 0, 0, 1);
-	if (mem) {
-		if (GetMappedFileName(GetCurrentProcess(),
-		                      mem,
-		                      filename,
-		                      cch_filename)) {
-			// Translate path with device name to drive letters.
-			TCHAR temp[512];
-			temp[0] = '\0';
-
-			if (GetLogicalDriveStrings(512-1, temp)) {
-				TCHAR name[MAX_PATH];
-				TCHAR drive[3] = TEXT(" :");
-				BOOL found = FALSE;
-				TCHAR *p = temp;
-
-				do {
-					// Copy the drive letter to the template string.
-					*drive = *p;
-
-					// Look up each device name.
-					if (QueryDosDevice(drive, name, MAX_PATH)) {
-						size_t name_len = _tcslen(name);
-						if (name_len < MAX_PATH) {
-							found = _tcsnicmp(filename, name, name_len) == 0
-							        && *(filename + name_len) == _T('\\');
-							if (found) {
-								// Reconstruct filename using temp_file and replace device path
-								// with DOS path.
-								TCHAR temp_file[MAX_PATH];
-								_sntprintf(temp_file,
-								           MAX_PATH - 1,
-								           TEXT("%s%s"),
-								           drive,
-								           filename+name_len);
-								_tcsncpy(filename, temp_file, _tcslen(temp_file));
-							}
-						}
-					}
-
-					// Go to the next NULL character.
-					while (*p++) {
-						// Do nothing.
-					}
-				} while (!found && *p); // End of string.
-			}
-		}
-		success = TRUE;
-		UnmapViewOfFile(mem);
-	}
-
-	CloseHandle(file_map);
-	return success;
-}
-#endif
-
 // A sane realpath() function, trying to cope with stupid path limits and a
 // broken API. Caller frees.
 char *
@@ -1148,12 +1102,13 @@ x_realpath(const char *path)
 		path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL, NULL);
 	if (INVALID_HANDLE_VALUE != path_handle) {
-#ifdef HAVE_GETFINALPATHNAMEBYHANDLEW
-		GetFinalPathNameByHandle(path_handle, ret, maxlen, FILE_NAME_NORMALIZED);
-#else
-		GetFileNameFromHandle(path_handle, ret, maxlen);
-#endif
+		bool ok = GetFinalPathNameByHandle(
+			path_handle, ret, maxlen, FILE_NAME_NORMALIZED) != 0;
 		CloseHandle(path_handle);
+		if (!ok) {
+			free(ret);
+			return x_strdup(path);
+		}
 		p = ret + 4; // Strip \\?\ from the file name.
 	} else {
 		snprintf(ret, maxlen, "%s", path);
@@ -1200,6 +1155,22 @@ gnu_getcwd(void)
 		size *= 2;
 	}
 }
+
+#ifndef HAVE_LOCALTIME_R
+// localtime_r replacement.
+struct tm *
+localtime_r(const time_t *timep, struct tm *result)
+{
+	struct tm *tm = localtime(timep);
+	if (tm) {
+		*result = *tm;
+		return result;
+	} else {
+		memset(result, 0, sizeof(*result));
+		return NULL;
+	}
+}
+#endif
 
 #ifndef HAVE_STRTOK_R
 // strtok_r replacement.
@@ -1486,9 +1457,8 @@ x_rename(const char *oldpath, const char *newpath)
 	return rename(oldpath, newpath);
 #else
 	// Windows' rename() refuses to overwrite an existing file.
-	unlink(newpath); // Not x_unlink, as x_unlink calls x_rename.
 	// If the function succeeds, the return value is nonzero.
-	if (MoveFileA(oldpath, newpath) == 0) {
+	if (MoveFileExA(oldpath, newpath, MOVEFILE_REPLACE_EXISTING) == 0) {
 		LPVOID lp_msg_buf;
 		DWORD dw = GetLastError();
 		FormatMessage(
@@ -1542,7 +1512,7 @@ do_x_unlink(const char *path, bool log_failure)
 	// If path is on an NFS share, unlink isn't atomic, so we rename to a temp
 	// file. We don't care if the temp file is trashed, so it's always safe to
 	// unlink it first.
-	char *tmp_name = format("%s.rm.%s", path, tmp_string());
+	char *tmp_name = format("%s.ccache.rm.tmp", path);
 
 	int result = 0;
 	if (x_rename(path, tmp_name) == -1) {
@@ -1747,5 +1717,16 @@ set_cloexec_flag(int fd)
 	}
 #else
 	(void)fd;
+#endif
+}
+
+double time_seconds(void)
+{
+#ifdef HAVE_GETTIMEOFDAY
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0;
+#else
+	return (double)time(NULL);
 #endif
 }

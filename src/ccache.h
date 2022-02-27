@@ -1,5 +1,5 @@
 // Copyright (C) 2002-2007 Andrew Tridgell
-// Copyright (C) 2009-2018 Joel Rosdahl
+// Copyright (C) 2009-2020 Joel Rosdahl
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
@@ -21,6 +21,7 @@
 #include "system.h"
 #include "conf.h"
 #include "counters.h"
+#include "minitrace.h"
 
 #ifdef __GNUC__
 #define ATTR_FORMAT(x, y, z) __attribute__((format (x, y, z)))
@@ -42,7 +43,7 @@ enum stats {
 	STATS_STDOUT = 1,
 	STATS_STATUS = 2,
 	STATS_ERROR = 3,
-	STATS_TOCACHE = 4,
+	STATS_CACHEMISS = 4,
 	STATS_PREPROCESSOR = 5,
 	STATS_COMPILER = 6,
 	STATS_MISSING = 7,
@@ -54,7 +55,7 @@ enum stats {
 	STATS_OBSOLETE_MAXFILES = 13,
 	STATS_OBSOLETE_MAXSIZE = 14,
 	STATS_SOURCELANG = 15,
-	STATS_DEVICE = 16,
+	STATS_BADOUTPUTFILE = 16,
 	STATS_NOINPUT = 17,
 	STATS_MULTIPLE = 18,
 	STATS_CONFTEST = 19,
@@ -84,20 +85,23 @@ enum guessed_compiler {
 
 extern enum guessed_compiler guessed_compiler;
 
-#define SLOPPY_INCLUDE_FILE_MTIME 1
-#define SLOPPY_INCLUDE_FILE_CTIME 2
-#define SLOPPY_FILE_MACRO 4
-#define SLOPPY_TIME_MACROS 8
-#define SLOPPY_PCH_DEFINES 16
+#define SLOPPY_INCLUDE_FILE_MTIME (1U << 0)
+#define SLOPPY_INCLUDE_FILE_CTIME (1U << 1)
+#define SLOPPY_TIME_MACROS (1U << 2)
+#define SLOPPY_PCH_DEFINES (1U << 3)
 // Allow us to match files based on their stats (size, mtime, ctime), without
 // looking at their contents.
-#define SLOPPY_FILE_STAT_MATCHES 32
+#define SLOPPY_FILE_STAT_MATCHES (1U << 4)
 // Allow us to not include any system headers in the manifest include files,
 // similar to -MM versus -M for dependencies.
-#define SLOPPY_NO_SYSTEM_HEADERS 64
+#define SLOPPY_SYSTEM_HEADERS (1U << 5)
 // Allow us to ignore ctimes when comparing file stats, so we can fake mtimes
 // if we want to (it is much harder to fake ctimes, requires changing clock)
-#define SLOPPY_FILE_STAT_MATCHES_CTIME 128
+#define SLOPPY_FILE_STAT_MATCHES_CTIME (1U << 6)
+// Allow us to not include the -index-store-path option in the manifest hash.
+#define SLOPPY_CLANG_INDEX_STORE (1U << 7)
+// Ignore locale settings.
+#define SLOPPY_LOCALE (1U << 8)
 
 #define str_eq(s1, s2) (strcmp((s1), (s2)) == 0)
 #define str_startswith(s, prefix) \
@@ -140,12 +144,13 @@ bool args_equal(struct args *args1, struct args *args2);
 void cc_log(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
 void cc_bulklog(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
 void cc_log_argv(const char *prefix, char **argv);
-bool cc_dump_log_buffer(const char *path);
+void cc_dump_debug_log_buffer(const char *path);
 void fatal(const char *format, ...) ATTR_FORMAT(printf, 1, 2) ATTR_NORETURN;
 void warn(const char *format, ...) ATTR_FORMAT(printf, 1, 2);
 
 void copy_fd(int fd_in, int fd_out);
-int copy_file(const char *src, const char *dest, int compress_level);
+int copy_file(const char *src, const char *dest, int compress_level,
+              bool via_tmp_file);
 int move_file(const char *src, const char *dest, int compress_level);
 int move_uncompressed_file(const char *src, const char *dest,
                            int compress_level);
@@ -163,6 +168,7 @@ char *x_strndup(const char *s, size_t n);
 void *x_malloc(size_t size);
 void *x_calloc(size_t nmemb, size_t size);
 void *x_realloc(void *ptr, size_t size);
+void x_setenv(const char *name, const char *value);
 void x_unsetenv(const char *name);
 int x_fstat(int fd, struct stat *buf);
 int x_lstat(const char *pathname, struct stat *buf);
@@ -178,6 +184,9 @@ char *format_parsable_size_with_suffix(uint64_t size);
 bool parse_size_with_suffix(const char *str, uint64_t *size);
 char *x_realpath(const char *path);
 char *gnu_getcwd(void);
+#ifndef HAVE_LOCALTIME_R
+struct tm *localtime_r(const time_t *timep, struct tm *result);
+#endif
 #ifndef HAVE_STRTOK_R
 char *strtok_r(char *str, const char *delim, char **saveptr);
 #endif
@@ -204,6 +213,7 @@ bool read_file(const char *path, size_t size_hint, char **data, size_t *size);
 char *read_text_file(const char *path, size_t size_hint);
 char *subst_env_in_string(const char *str, char **errmsg);
 void set_cloexec_flag(int fd);
+double time_seconds(void);
 
 // ----------------------------------------------------------------------------
 // stats.c
@@ -213,7 +223,8 @@ void stats_flush(void);
 unsigned stats_get_pending(enum stats stat);
 void stats_zero(void);
 void stats_summary(void);
-void stats_update_size(int64_t size, int files);
+void stats_print(void);
+void stats_update_size(const char *sfile, int64_t size, int files);
 void stats_get_obsolete_limits(const char *dir, unsigned *maxfiles,
                                uint64_t *maxsize);
 void stats_set_sizes(const char *dir, unsigned num_files, uint64_t total_size);
@@ -259,8 +270,10 @@ extern time_t time_of_compilation;
 extern bool output_is_precompiled_header;
 void block_signals(void);
 void unblock_signals(void);
-bool cc_process_args(struct args *args, struct args **preprocessor_args,
-                    struct args **compiler_args);
+bool cc_process_args(struct args *args,
+                     struct args **preprocessor_args,
+                     struct args **extra_args_to_hash,
+                     struct args **compiler_args);
 void cc_reset(void);
 bool is_precompiled_header(const char *path);
 
@@ -278,7 +291,7 @@ typedef int (*COMPAR_FN_T)(const void *, const void *);
 #endif
 
 #ifdef _WIN32
-char *win32argvtos(char *prefix, char **argv);
+char *win32argvtos(char *prefix, char **argv, int *length);
 char *win32getshell(char *path);
 int win32execute(char *path, char **argv, int doreturn,
                  int fd_stdout, int fd_stderr);

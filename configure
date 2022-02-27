@@ -620,6 +620,7 @@ ac_includes_default="\
 
 ac_header_list=
 ac_subst_vars='LTLIBOBJS
+GPERF
 LIBOBJS
 EGREP
 GREP
@@ -637,12 +638,13 @@ CPPFLAGS
 LDFLAGS
 CFLAGS
 CC
-disable_man
 test_suites
-include_dev_mk
-getopt_long_c
 no_implicit_fallthrough_warning
+more_warnings
+include_dev_mk
+extra_sources
 extra_libs
+disable_man
 host_os
 host_vendor
 host_cpu
@@ -696,6 +698,7 @@ enable_option_checking
 enable_more_warnings
 with_bundled_zlib
 enable_man
+enable_tracing
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1330,6 +1333,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-more-warnings  enable more compiler warnings
   --disable-man           disable installing man pages
+  --enable-tracing        enable possibility to use internal ccache tracing
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -2355,7 +2359,11 @@ case $host in
 $as_echo "#define _WIN32_WINNT 0x0600" >>confdefs.h
 
         ;;
+    *os400* | *aix*)
+        AR="ar -X64"
+        ;;
 esac
+
 
 
 
@@ -4065,12 +4073,15 @@ if test "${enable_more_warnings+set}" = set; then :
 fi
 
 if test x${enable_more_warnings} = xyes; then
-    CFLAGS="$CFLAGS -Wextra -Wpedantic"
+    more_warnings="-Wextra -Wpedantic"
     if test "$ac_compiler_clang" = yes; then
-        CFLAGS="$CFLAGS -Weverything"
-        CFLAGS="$CFLAGS -Wno-padded -Wno-disabled-macro-expansion -Wno-format-nonliteral"
-        CFLAGS="$CFLAGS -Wno-double-promotion -Wno-float-conversion"
-        CFLAGS="$CFLAGS -Wno-conversion -Wno-shorten-64-to-32 -Wno-sign-conversion"
+        more_warnings="$more_warnings -Weverything"
+        more_warnings="$more_warnings -Wno-conversion"
+        more_warnings="$more_warnings -Wno-disabled-macro-expansion"
+        more_warnings="$more_warnings -Wno-format-nonliteral"
+        more_warnings="$more_warnings -Wno-padded"
+        more_warnings="$more_warnings -Wno-shorten-64-to-32"
+        more_warnings="$more_warnings -Wno-sign-conversion"
     fi
 fi
 
@@ -4651,6 +4662,17 @@ _ACEOF
 fi
 done
 
+for ac_func in localtime_r
+do :
+  ac_fn_c_check_func "$LINENO" "localtime_r" "ac_cv_func_localtime_r"
+if test "x$ac_cv_func_localtime_r" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LOCALTIME_R 1
+_ACEOF
+
+fi
+done
+
 for ac_func in mkstemp
 do :
   ac_fn_c_check_func "$LINENO" "mkstemp" "ac_cv_func_mkstemp"
@@ -4668,6 +4690,17 @@ do :
 if test "x$ac_cv_func_realpath" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_REALPATH 1
+_ACEOF
+
+fi
+done
+
+for ac_func in setenv
+do :
+  ac_fn_c_check_func "$LINENO" "setenv" "ac_cv_func_setenv"
+if test "x$ac_cv_func_setenv" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SETENV 1
 _ACEOF
 
 fi
@@ -4717,10 +4750,6 @@ _ACEOF
 fi
 done
 
-
-if test x"$ac_cv_func_getopt_long" != x"yes"; then
-    getopt_long_c="src/getopt_long.c"
-fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for compar_fn_t in stdlib.h" >&5
 $as_echo_n "checking for compar_fn_t in stdlib.h... " >&6; }
@@ -5973,21 +6002,18 @@ if test x${enable_man} = xno; then
     disable_man='#'
 fi
 
+# Check whether --enable-tracing was given.
+if test "${enable_tracing+set}" = set; then :
+  enableval=$enable_tracing;
+fi
+
+if test x${enable_tracing} = xyes; then
+    CPPFLAGS="$CPPFLAGS -DMTR_ENABLED"
+    extra_sources="src/minitrace.c"
+fi
+
 if test x${windows_os} = xyes; then
     LIBS="$LIBS -lws2_32"
-    for ac_func in GetFinalPathNameByHandleW
-do :
-  ac_fn_c_check_func "$LINENO" "GetFinalPathNameByHandleW" "ac_cv_func_GetFinalPathNameByHandleW"
-if test "x$ac_cv_func_GetFinalPathNameByHandleW" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_GETFINALPATHNAMEBYHANDLEW 1
-_ACEOF
-
-else
-  LIBS="$LIBS -lpsapi"
-fi
-done
-
 fi
 
  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether byte ordering is bigendian" >&5
@@ -6295,14 +6321,110 @@ fi
 
 mkdir -p .deps src unittest
 
-if test ! -f $srcdir/dev_mode_disabled && test "$RUN_FROM_BUILD_FARM" != yes; then
+if test ! -f $srcdir/dev_mode_disabled; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: developer mode enabled" >&5
 $as_echo "$as_me: developer mode enabled" >&6;}
     ac_config_files="$ac_config_files dev.mk"
 
     include_dev_mk='include dev.mk'
     version=`(git --git-dir=$srcdir/.git describe --dirty 2>/dev/null || echo vunknown) | sed -e 's/v//' -e 's/-/+/' -e 's/-/_/g'`
+    mkdir -p src
     echo "extern const char CCACHE_VERSION[]; const char CCACHE_VERSION[] = \"$version\";" >src/version.c
+    if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}gperf", so it can be a program name with args.
+set dummy ${ac_tool_prefix}gperf; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_GPERF+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$GPERF"; then
+  ac_cv_prog_GPERF="$GPERF" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_GPERF="${ac_tool_prefix}gperf"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+GPERF=$ac_cv_prog_GPERF
+if test -n "$GPERF"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GPERF" >&5
+$as_echo "$GPERF" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_prog_GPERF"; then
+  ac_ct_GPERF=$GPERF
+  # Extract the first word of "gperf", so it can be a program name with args.
+set dummy gperf; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_ac_ct_GPERF+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_GPERF"; then
+  ac_cv_prog_ac_ct_GPERF="$ac_ct_GPERF" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ac_ct_GPERF="gperf"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_GPERF=$ac_cv_prog_ac_ct_GPERF
+if test -n "$ac_ct_GPERF"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_GPERF" >&5
+$as_echo "$ac_ct_GPERF" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_ct_GPERF" = x; then
+    GPERF=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    GPERF=$ac_ct_GPERF
+  fi
+else
+  GPERF="$ac_cv_prog_GPERF"
+fi
+
+    if test -z "$GPERF"; then
+        as_fn_error $? "please install gperf" "$LINENO" 5
+    fi
 else
     { $as_echo "$as_me:${as_lineno-$LINENO}: developer mode disabled" >&5
 $as_echo "$as_me: developer mode disabled" >&6;}
@@ -7631,7 +7753,7 @@ cat <<EOF >config.h.tmp
 #define CCACHE_CONFIG_H
 #ifdef __clang__
 #pragma clang diagnostic push
-#if __clang_major__ >= 4
+#if __has_warning("-Wreserved-id-macro")
 #pragma clang diagnostic ignored "-Wreserved-id-macro"
 #endif
 #endif

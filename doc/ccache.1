@@ -2,12 +2,12 @@
 .\"     Title: ccache
 .\"    Author: [see the "Author" section]
 .\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 10/15/2018
+.\"      Date: 10/01/2020
 .\"    Manual: ccache Manual
-.\"    Source: ccache 3.5
+.\"    Source: ccache 3.7.12
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "10/15/2018" "ccache 3\&.5" "ccache Manual"
+.TH "CCACHE" "1" "10/01/2020" "ccache 3\&.7\&.12" "ccache Manual"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -211,14 +211,33 @@ Clean up the cache by removing old cached files until the specified file number 
 Clear the entire cache, removing all cached files, but keeping the configuration file\&.
 .RE
 .PP
-\fB\fB\-F, \-\-max\-files\fR\fR=\fIN\fR
+\fB\fB\-\-dump\-manifest\fR\fR=\fIPATH\fR
 .RS 4
-Set the maximum number of files allowed in the cache\&. Use 0 for no limit\&. The value is stored in a configuration file in the cache directory and applies to all future compilations\&.
+Dump manifest file at PATH in text format\&. This is only useful when debugging ccache and its behavior\&.
+.RE
+.PP
+\fB\fB\-k, \-\-get\-config\fR\fR=\fIKEY\fR
+.RS 4
+Print the value of configuration option
+\fIKEY\fR\&. See
+CONFIGURATION
+for more information\&.
+.RE
+.PP
+\fB\fB\-\-hash\-file\fR\fR=\fIPATH\fR
+.RS 4
+Print the hash (in format
+\fB<MD4>\-<size>\fR) of the file at PATH\&. This is only useful when debugging ccache and its behavior\&.
 .RE
 .PP
 \fB\fB\-h, \-\-help\fR\fR
 .RS 4
 Print an options summary page\&.
+.RE
+.PP
+\fB\fB\-F, \-\-max\-files\fR\fR=\fIN\fR
+.RS 4
+Set the maximum number of files allowed in the cache\&. Use 0 for no limit\&. The value is stored in a configuration file in the cache directory and applies to all future compilations\&.
 .RE
 .PP
 \fB\fB\-M, \-\-max\-size\fR\fR=\fISIZE\fR
@@ -228,9 +247,14 @@ Set the maximum size of the files stored in the cache\&.
 should be a number followed by an optional suffix: k, M, G, T (decimal), Ki, Mi, Gi or Ti (binary)\&. The default suffix is G\&. Use 0 for no limit\&. The value is stored in a configuration file in the cache directory and applies to all future compilations\&.
 .RE
 .PP
+\fB\fB\-\-print\-stats\fR\fR
+.RS 4
+Print statistics counter IDs and corresponding values machine\-parsable (tab\-separated) format\&.
+.RE
+.PP
 \fB\fB\-o, \-\-set\-config\fR\fR=\fIKEY=VALUE\fR
 .RS 4
-Set configuration
+Set configuration option
 \fIKEY\fR
 to
 \fIVALUE\fR\&. See
@@ -238,14 +262,14 @@ CONFIGURATION
 for more information\&.
 .RE
 .PP
-\fB\fB\-p, \-\-print\-config\fR\fR
+\fB\fB\-p, \-\-show\-config\fR\fR
 .RS 4
-Print current configuration options and from where they originate (environment variable, configuration file or compile\-time default)\&.
+Print current configuration options and from where they originate (environment variable, configuration file or compile\-time default) in human\-readable format\&.
 .RE
 .PP
 \fB\fB\-s, \-\-show\-stats\fR\fR
 .RS 4
-Print the current statistics summary for the cache\&.
+Print a summary of configuration and statistics counters in human\-readable format\&.
 .RE
 .PP
 \fB\fB\-V, \-\-version\fR\fR
@@ -480,6 +504,12 @@ debugging
 for more information\&. The default is false\&.
 .RE
 .PP
+\fBdepend_mode\fR (\fBCCACHE_DEPEND\fR or \fBCCACHE_NODEPEND\fR, see Boolean values above)
+.RS 4
+If true, the depend mode will be used\&. The default is false\&. See
+THE DEPEND MODE\&.
+.RE
+.PP
 \fBdirect_mode\fR (\fBCCACHE_DIRECT\fR or \fBCCACHE_NODIRECT\fR, see Boolean values above)
 .RS 4
 If true, the direct mode will be used\&. The default is true\&. See
@@ -619,9 +649,16 @@ This option adds a list of prefixes (separated by space) to the command line tha
 .PP
 \fBread_only\fR (\fBCCACHE_READONLY\fR or \fBCCACHE_NOREADONLY\fR, see Boolean values above)
 .RS 4
-If true, ccache will attempt to use existing cached object files, but it will not to try to add anything new to the cache\&. If you are using this because your ccache directory is read\-only, then you need to set
+If true, ccache will attempt to use existing cached object files, but it will not add new results to the cache\&. Statistics counters will still be updated, though, unless the
+\fBstats\fR
+option is set to
+\fBfalse\fR\&.
+.sp
+If you are using this because your ccache directory is read\-only, you need to set
 \fBtemporary_dir\fR
-as otherwise ccache will fail to create temporary files\&.
+since ccache will fail to create temporary files otherwise\&. You may also want to set
+\fBstats = false\fR
+to make ccache not even try to update stats files\&.
 .RE
 .PP
 \fBread_only_direct\fR (\fBCCACHE_READONLY_DIRECT\fR or \fBCCACHE_NOREADONLY_DIRECT\fR, see Boolean values above)
@@ -664,11 +701,11 @@ preprocessing (like macros)\&.
 .RS 4
 By default, ccache tries to give as few false cache hits as possible\&. However, in certain situations it\(cqs possible that you know things that ccache can\(cqt take for granted\&. This setting makes it possible to tell ccache to relax some checks in order to increase the hit rate\&. The value should be a comma\-separated string with options\&. Available options are:
 .PP
-\fBfile_macro\fR
+\fBclang_index_store\fR
 .RS 4
-Ignore
-\fB__FILE__\fR
-being present in the source\&.
+Ignore the Clang compiler option
+\fB\-index\-store\-path\fR
+and its argument when computing the manifest hash\&. This is useful if you use Xcode, which uses an index store path derived from the local project path\&. Note that the index store won\(cqt be updated correctly on cache hits if you enable this option\&.
 .RE
 .PP
 \fBfile_stat_matches\fR
@@ -685,7 +722,7 @@ is enabled\&. This can be useful when backdating files\*(Aq mtimes in a controll
 .PP
 \fBinclude_file_ctime\fR
 .RS 4
-By default, ccache also will not cache a file if it includes a header whose ctime is too new\&. This option disables that check\&.
+By default, ccache will not cache a file if it includes a header whose ctime is too new\&. This option disables that check\&.
 .RE
 .PP
 \fBinclude_file_mtime\fR
@@ -693,9 +730,15 @@ By default, ccache also will not cache a file if it includes a header whose ctim
 By default, ccache will not cache a file if it includes a header whose mtime is too new\&. This option disables that check\&.
 .RE
 .PP
-\fBno_system_headers\fR
+\fBlocale\fR
 .RS 4
-By default, ccache will also include all system headers in the manifest\&. With this option set, ccache will only include system headers in the hash but not add the system header files to the list of include files\&.
+ccache includes the environment variables
+\fBLANG\fR,
+\fBLC_ALL\fR,
+\fBLC_CTYPE\fR
+and
+\fBLC_MESSAGES\fR
+in the hash by default since they may affect localization of compiler warning messages\&. Set this option to tell ccache not to do that\&.
 .RE
 .PP
 \fBpch_defines\fR
@@ -704,6 +747,11 @@ Be sloppy about
 \fB#define\fRs when precompiling a header file\&. See
 PRECOMPILED HEADERS
 for more information\&.
+.RE
+.PP
+\fBsystem_headers\fR
+.RS 4
+By default, ccache will also include all system headers in the manifest\&. With this option set, ccache will only include system headers in the hash but not add the system header files to the list of include files\&.
 .RE
 .PP
 \fBtime_macros\fR
@@ -753,15 +801,6 @@ path, but this requirement has been relaxed\&.)
 \fBumask\fR (\fBCCACHE_UMASK\fR)
 .RS 4
 This setting specifies the umask for ccache and all child processes (such as the compiler)\&. This is mostly useful when you wish to share your cache with other users\&. Note that this also affects the file permissions set on the object files created from your compilations\&.
-.RE
-.PP
-\fBunify\fR (\fBCCACHE_UNIFY\fR or \fBCCACHE_NOUNIFY\fR, see Boolean values above)
-.RS 4
-If true, ccache will use a C/C++ unifier when hashing the preprocessor output if the
-\fB\-g\fR
-option is not used\&. The unifier is slower than a normal hash, so setting this environment variable loses a little bit of speed, but it means that ccache can take advantage of not recompiling when the changes to the source code consist of reformatting only\&. Note that enabling the unifier changes the hash, so cached compilations produced when the unifier is enabled cannot be reused when the unifier is disabled, and vice versa\&. Enabling the unifier may result in incorrect line number information in compiler warning messages and expansions of the
-\fB__LINE__\fR
-macro\&.
 .RE
 .SH "CACHE SIZE MANAGEMENT"
 .sp
@@ -1082,7 +1121,7 @@ T}
 .sp
 The basic idea is to detect when you are compiling exactly the same code a second time and reuse the previously produced output\&. The detection is done by hashing different kinds of information that should be unique for the compilation and then using the hash sum to identify the cached output\&. ccache uses MD4, a very fast cryptographic hash algorithm, for the hashing\&. (MD4 is nowadays too weak to be useful in cryptographic contexts, but it should be safe enough to be used to identify recompilations\&.) On a cache hit, ccache is able to supply all of the correct compiler outputs (including all warnings, dependency file, etc) from the cache\&.
 .sp
-ccache has two ways of doing the detection:
+ccache has two ways of gathering information used to look up results in the cache:
 .sp
 .RS 4
 .ie n \{\
@@ -1109,9 +1148,11 @@ the
 .RE
 .sp
 The direct mode is generally faster since running the preprocessor has some overhead\&.
+.sp
+If no previous result is detected (i\&.e\&., there is a cache miss) using the direct mode, ccache will fall back to the preprocessor mode unless the \fBdepend mode\fR is enabled\&. In the depend mode, ccache never runs the preprocessor, not even on cache misses\&. Read more in THE DEPEND MODE below\&.
 .SS "Common hashed information"
 .sp
-For both modes, the following information is included in the hash:
+The following information is always included in the hash:
 .sp
 .RS 4
 .ie n \{\
@@ -1360,6 +1401,110 @@ any standard error output generated by the preprocessor
 .RE
 .sp
 Based on the hash, the cached compilation result can be looked up directly in the cache\&.
+.SS "The depend mode"
+.sp
+If the depend mode is enabled, ccache will not use the preprocessor at all\&. The hash used to identify results in the cache will be based on the direct mode hash described above plus information about include files read from the dependency file generated by the compiler with \fB\-MD\fR or \fB\-MMD\fR\&.
+.sp
+Advantages:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+The ccache overhead of a cache miss will be much smaller\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Not running the preprocessor at all can be good if compilation is performed remotely, for instance when using distcc or similar; ccache then won\(cqt make potentially costly preprocessor calls on the local machine\&.
+.RE
+.sp
+Disadvantages:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+The cache hit rate will likely be lower since any change to compiler options or source code will make the hash different\&. Compare this with the default setup where ccache will fall back to the preprocessor mode, which is tolerant to some types of changes of compiler options and source code changes\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+If \-MD is used, the manifest entries will include system header files as well, thus slowing down cache hits slightly, just as using \-MD slows down make\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+If \-MMD is used, the manifest entries will not include system header files, which means ccache will ignore changes in them\&.
+.RE
+.sp
+The depend mode will be disabled if any of the following holds:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+the configuration setting
+\fBdepend_mode\fR
+is false
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+the configuration setting
+\fBrun_second_cpp\fR
+is false
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+the compiler is not generating dependencies using
+\fB\-MD\fR
+or
+\fB\-MMD\fR
+.RE
 .SH "CACHE DEBUGGING"
 .sp
 To find out what information ccache actually is hashing, you can enable the debug mode via the configuration setting \fBdebug\fR or by setting \fBCCACHE_DEBUG\fR in the environment\&. This can be useful if you are investigating why you don\(cqt get cache hits\&. Note that performance will be reduced slightly\&.
@@ -1620,7 +1765,9 @@ use the
 \fB\-include\fR
 compiler option to include the precompiled header (i\&.e\&., don\(cqt use
 \fB#include\fR
-in the source code to include the header); or
+in the source code to include the header; the filename itself must be sufficient to find the header, i\&.e\&.
+\fB\-I\fR
+paths are not searched); or
 .RE
 .sp
 .RS 4
@@ -1644,7 +1791,7 @@ compiler option to include the PCH file generated from the precompiled header; o
 .sp -1
 .IP \(bu 2.3
 .\}
-add the
+(for the GCC compiler) add the
 \fB\-fpch\-preprocess\fR
 compiler option when compiling\&.
 .RE
@@ -1765,6 +1912,8 @@ ccache hasn\(cqt been tested very thoroughly on NFS\&.
 .RE
 .sp
 A tip is to set \fBtemporary_dir\fR to a directory on the local host to avoid NFS traffic for temporary files\&.
+.sp
+It is recommended to use the same operating system version when using a shared cache\&. If operating system versions are different then system include files will likely be different and there will be few or no cache hits between the systems\&. One way of improving cache hit rate in that case is to set \fBsloppiness\fR to \fBsystem_headers\fR to ignore system headers\&.
 .SH "USING CCACHE WITH OTHER COMPILER WRAPPERS"
 .sp
 The recommended way of combining ccache with another compiler wrapper (such as \(lqdistcc\(rq) is by letting ccache execute the compiler wrapper\&. This is accomplished by defining the configuration setting \fBprefix_command\fR, for example by setting the environment variable \fBCCACHE_PREFIX\fR to the name of the wrapper (e\&.g\&. \fBdistcc\fR)\&. ccache will then prefix the command line with the specified command when running the compiler\&. To specify several prefix commands, set \fBprefix_command\fR to a colon\-separated list of commands\&.
@@ -1845,7 +1994,7 @@ is set as mentioned above\&. If you want to share cache hits, you can pass
 .SH "TROUBLESHOOTING"
 .SS "General"
 .sp
-A general tip for getting information about what ccache is doing is to enable debug logging by setting \fBlog_file\fR\&. The log contains executed commands, important decisions that ccache makes, read and written files, etc\&. Another way of keeping track of what is happening is to check the output of \fBccache \-s\fR\&.
+A general tip for getting information about what ccache is doing is to enable debug logging by setting the configuration option \fBdebug\fR (or the environment variable \fBCCACHE_DEBUG\fR); see debugging for more information\&. Another way of keeping track of what is happening is to check the output of \fBccache \-s\fR\&.
 .SS "Performance"
 .sp
 ccache has been written to perform well out of the box, but sometimes you may have to do some adjustments of how you use the compiler and ccache in order to improve performance\&.
@@ -1928,7 +2077,7 @@ This was the first compilation with a new value of the base directory setting\&.
 A modification time of one of the include files is too new (created the same second as the compilation is being done)\&. This check is made to avoid a race condition\&. To fix this, create the include file earlier in the build process, if possible, or set
 \fBsloppiness\fR
 to
-\fBinclude_file_mtime\fR
+\fBinclude_file_ctime, include_file_mtime\fR
 if you are willing to take the risk\&. (The race condition consists of these events: the preprocessor is run; an include file is modified by someone; the new include file is hashed by ccache; the real compiler is run on the preprocessor\(cqs output, which contains data from the old header file; the wrong object file is stored in the cache\&.)
 .RE
 .sp
@@ -1992,20 +2141,9 @@ to
 .sp -1
 .IP \(bu 2.3
 .\}
-The
+The input file path has changed\&. ccache includes the input file path in the direct mode hash to be able to take relative include files into account and to produce a correct object file if the source code includes a
 \fB__FILE__\fR
-preprocessor macro is (potentially) being used and the file path has changed\&. If
-\fB__FILE__\fR
-is present in the source code, ccache hashes the current input file path in order to be able to produce the correct object file if the
-\fB__FILE__\fR
-macro affects the output\&. If you know that
-\fB__FILE__\fR
-isn\(cqt used in practise, or don\(cqt care if ccache produces objects where
-\fB__FILE__\fR
-is expanded to the wrong path, you can set
-\fBsloppiness\fR
-to
-\fBfile_macro\fR\&.
+macro\&.
 .RE
 .RE
 .sp
@@ -2114,7 +2252,7 @@ An alternative is to clear the whole cache with \fBccache \-C\fR if you don\(cqt
 There are no reported issues about ccache producing broken object files reproducibly\&. That doesn\(cqt mean it can\(cqt happen, so if you find a repeatable case, please report it\&.
 .SH "MORE INFORMATION"
 .sp
-Credits, mailing list information, bug reporting instructions, source code, etc, can be found on ccache\(cqs web site: https://ccache\&.samba\&.org\&.
+Credits, mailing list information, bug reporting instructions, source code, etc, can be found on ccache\(cqs web site: https://ccache\&.dev\&.
 .SH "AUTHOR"
 .sp
-ccache was originally written by Andrew Tridgell and is currently developed and maintained by Joel Rosdahl\&. See AUTHORS\&.txt or AUTHORS\&.html and https://ccache\&.samba\&.org/credits\&.html for a list of contributors\&.
+ccache was originally written by Andrew Tridgell and is currently developed and maintained by Joel Rosdahl\&. See AUTHORS\&.txt or AUTHORS\&.html and https://ccache\&.dev/credits\&.html for a list of contributors\&.

@@ -1,4 +1,4 @@
-// Copyright (C) 2011-2018 Joel Rosdahl
+// Copyright (C) 2011-2020 Joel Rosdahl
 //
 // This program is free software; you can redistribute it and/or modify it
 // under the terms of the GNU General Public License as published by the Free
@@ -15,300 +15,15 @@
 // Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 #include "conf.h"
+#include "confitems.h"
+#include "envtoconfitems.h"
 #include "ccache.h"
 
-typedef bool (*conf_item_parser)(const char *str, void *result, char **errmsg);
-typedef bool (*conf_item_verifier)(void *value, char **errmsg);
-typedef const char *(*conf_item_formatter)(void *value);
-
-struct conf_item {
-	const char *name;
-	size_t number;
-	conf_item_parser parser;
-	size_t offset;
-	conf_item_verifier verifier;
-	conf_item_formatter formatter;
+enum handle_conf_result {
+	HANDLE_CONF_OK,
+	HANDLE_CONF_UNKNOWN,
+	HANDLE_CONF_FAIL
 };
-
-struct env_to_conf_item {
-	const char *env_name;
-	const char *conf_name;
-};
-
-static bool
-parse_bool(const char *str, void *result, char **errmsg)
-{
-	bool *value = (bool *)result;
-
-	if (str_eq(str, "true")) {
-		*value = true;
-		return true;
-	} else if (str_eq(str, "false")) {
-		*value = false;
-		return true;
-	} else {
-		*errmsg = format("not a boolean value: \"%s\"", str);
-		return false;
-	}
-}
-
-static const char *
-bool_to_string(bool value)
-{
-	return value ? "true" : "false";
-}
-
-static const char *
-format_bool(void *value)
-{
-	bool *b = (bool *)value;
-	return x_strdup(bool_to_string(*b));
-}
-
-static bool
-parse_env_string(const char *str, void *result, char **errmsg)
-{
-	char **value = (char **)result;
-	free(*value);
-	*value = subst_env_in_string(str, errmsg);
-	return *value != NULL;
-}
-
-static const char *
-format_string(void *value)
-{
-	char **str = (char **)value;
-	return x_strdup(*str);
-}
-
-static const char *
-format_env_string(void *value)
-{
-	return format_string(value);
-}
-
-static bool
-parse_float(const char *str, void *result, char **errmsg)
-{
-	float *value = (float *)result;
-	errno = 0;
-	char *endptr;
-	float x = strtof(str, &endptr);
-	if (errno == 0 && *str != '\0' && *endptr == '\0') {
-		*value = x;
-		return true;
-	} else {
-		*errmsg = format("invalid floating point: \"%s\"", str);
-		return false;
-	}
-}
-
-static const char *
-format_float(void *value)
-{
-	float *x = (float *)value;
-	return format("%.1f", *x);
-}
-
-static bool
-parse_size(const char *str, void *result, char **errmsg)
-{
-	uint64_t *value = (uint64_t *)result;
-	uint64_t size;
-	if (parse_size_with_suffix(str, &size)) {
-		*value = size;
-		return true;
-	} else {
-		*errmsg = format("invalid size: \"%s\"", str);
-		return false;
-	}
-}
-
-static const char *
-format_size(void *value)
-{
-	uint64_t *size = (uint64_t *)value;
-	return format_parsable_size_with_suffix(*size);
-}
-
-static bool
-parse_sloppiness(const char *str, void *result, char **errmsg)
-{
-	unsigned *value = (unsigned *)result;
-	if (!str) {
-		return *value;
-	}
-
-	char *p = x_strdup(str);
-	char *q = p;
-	char *word;
-	char *saveptr = NULL;
-	while ((word = strtok_r(q, ", ", &saveptr))) {
-		if (str_eq(word, "file_macro")) {
-			*value |= SLOPPY_FILE_MACRO;
-		} else if (str_eq(word, "file_stat_matches")) {
-			*value |= SLOPPY_FILE_STAT_MATCHES;
-		} else if (str_eq(word, "file_stat_matches_ctime")) {
-			*value |= SLOPPY_FILE_STAT_MATCHES_CTIME;
-		} else if (str_eq(word, "include_file_ctime")) {
-			*value |= SLOPPY_INCLUDE_FILE_CTIME;
-		} else if (str_eq(word, "include_file_mtime")) {
-			*value |= SLOPPY_INCLUDE_FILE_MTIME;
-		} else if (str_eq(word, "no_system_headers")) {
-			*value |= SLOPPY_NO_SYSTEM_HEADERS;
-		} else if (str_eq(word, "pch_defines")) {
-			*value |= SLOPPY_PCH_DEFINES;
-		} else if (str_eq(word, "time_macros")) {
-			*value |= SLOPPY_TIME_MACROS;
-		} else {
-			*errmsg = format("unknown sloppiness: \"%s\"", word);
-			free(p);
-			return false;
-		}
-		q = NULL;
-	}
-	free(p);
-	return true;
-}
-
-static const char *
-format_sloppiness(void *value)
-{
-	unsigned *sloppiness = (unsigned *)value;
-	char *s = x_strdup("");
-	if (*sloppiness & SLOPPY_FILE_MACRO) {
-		reformat(&s, "%sfile_macro, ", s);
-	}
-	if (*sloppiness & SLOPPY_INCLUDE_FILE_MTIME) {
-		reformat(&s, "%sinclude_file_mtime, ", s);
-	}
-	if (*sloppiness & SLOPPY_INCLUDE_FILE_CTIME) {
-		reformat(&s, "%sinclude_file_ctime, ", s);
-	}
-	if (*sloppiness & SLOPPY_TIME_MACROS) {
-		reformat(&s, "%stime_macros, ", s);
-	}
-	if (*sloppiness & SLOPPY_PCH_DEFINES) {
-		reformat(&s, "%spch_defines, ", s);
-	}
-	if (*sloppiness & SLOPPY_FILE_STAT_MATCHES) {
-		reformat(&s, "%sfile_stat_matches, ", s);
-	}
-	if (*sloppiness & SLOPPY_FILE_STAT_MATCHES_CTIME) {
-		reformat(&s, "%sfile_stat_matches_ctime, ", s);
-	}
-	if (*sloppiness & SLOPPY_NO_SYSTEM_HEADERS) {
-		reformat(&s, "%sno_system_headers, ", s);
-	}
-	if (*sloppiness) {
-		// Strip last ", ".
-		s[strlen(s) - 2] = '\0';
-	}
-	return s;
-}
-
-static bool
-parse_string(const char *str, void *result, char **errmsg)
-{
-	(void)errmsg;
-
-	char **value = (char **)result;
-	free(*value);
-	*value = x_strdup(str);
-	return true;
-}
-
-static bool
-parse_umask(const char *str, void *result, char **errmsg)
-{
-	unsigned *value = (unsigned *)result;
-	if (str_eq(str, "")) {
-		*value = UINT_MAX;
-		return true;
-	}
-
-	errno = 0;
-	char *endptr;
-	*value = strtoul(str, &endptr, 8);
-	if (errno == 0 && *str != '\0' && *endptr == '\0') {
-		return true;
-	} else {
-		*errmsg = format("not an octal integer: \"%s\"", str);
-		return false;
-	}
-}
-
-static const char *
-format_umask(void *value)
-{
-	unsigned *umask = (unsigned *)value;
-	if (*umask == UINT_MAX) {
-		return x_strdup("");
-	} else {
-		return format("%03o", *umask);
-	}
-}
-
-static bool
-parse_unsigned(const char *str, void *result, char **errmsg)
-{
-	unsigned *value = (unsigned *)result;
-	errno = 0;
-	char *endptr;
-	long x = strtol(str, &endptr, 10);
-	if (errno == 0 && x >= 0 && *str != '\0' && *endptr == '\0') {
-		*value = x;
-		return true;
-	} else {
-		*errmsg = format("invalid unsigned integer: \"%s\"", str);
-		return false;
-	}
-}
-
-static const char *
-format_unsigned(void *value)
-{
-	unsigned *i = (unsigned *)value;
-	return format("%u", *i);
-}
-
-static bool
-verify_absolute_path(void *value, char **errmsg)
-{
-	char **path = (char **)value;
-	assert(*path);
-	if (str_eq(*path, "")) {
-		// The empty string means "disable" in this case.
-		return true;
-	} else if (is_absolute_path(*path)) {
-		return true;
-	} else {
-		*errmsg = format("not an absolute path: \"%s\"", *path);
-		return false;
-	}
-}
-
-static bool
-verify_dir_levels(void *value, char **errmsg)
-{
-	unsigned *levels = (unsigned *)value;
-	assert(levels);
-	if (*levels >= 1 && *levels <= 8) {
-		return true;
-	} else {
-		*errmsg = format("cache directory levels must be between 1 and 8");
-		return false;
-	}
-}
-
-#define ITEM(name, type) \
-	parse_ ## type, offsetof(struct conf, name), NULL, format_ ## type
-#define ITEM_V(name, type, verification) \
-	parse_ ## type, offsetof(struct conf, name), \
-	verify_ ## verification, format_ ## type
-
-#include "confitems_lookup.c"
-#include "envtoconfitems_lookup.c"
 
 static const struct conf_item *
 find_conf(const char *name)
@@ -322,18 +37,17 @@ find_env_to_conf(const char *name)
 	return envtoconfitems_get(name, strlen(name));
 }
 
-static bool
+static enum handle_conf_result
 handle_conf_setting(struct conf *conf, const char *key, const char *value,
-                    char **errmsg, bool from_env_variable, bool negate_boolean,
-                    const char *origin)
+                    char **errmsg, const char *env_var_name,
+                    bool negate_boolean, const char *origin)
 {
 	const struct conf_item *item = find_conf(key);
 	if (!item) {
-		*errmsg = format("unknown configuration option \"%s\"", key);
-		return false;
+		return HANDLE_CONF_UNKNOWN;
 	}
 
-	if (from_env_variable && item->parser == parse_bool) {
+	if (env_var_name && item->parser == confitem_parse_bool) {
 		// Special rule for boolean settings from the environment: "0", "false",
 		// "disable" and "no" (case insensitive) are invalid, and all other values
 		// mean true.
@@ -343,7 +57,13 @@ handle_conf_setting(struct conf *conf, const char *key, const char *value,
 		// enabled.
 		if (str_eq(value, "0") || strcasecmp(value, "false") == 0
 		    || strcasecmp(value, "disable") == 0 || strcasecmp(value, "no") == 0) {
-			fatal("invalid boolean environment variable value \"%s\"", value);
+			fatal(
+				"invalid boolean environment variable value \"%s\" for CCACHE_%s%s"
+				" (did you mean to set \"CCACHE_%s%s=true\"?)",
+				value,
+				negate_boolean ? "NO" : "",
+				env_var_name, negate_boolean ? "" : "NO",
+				env_var_name);
 		}
 
 		bool *boolvalue = (bool *)((char *)conf + item->offset);
@@ -352,21 +72,21 @@ handle_conf_setting(struct conf *conf, const char *key, const char *value,
 	}
 
 	if (!item->parser(value, (char *)conf + item->offset, errmsg)) {
-		return false;
+		return HANDLE_CONF_FAIL;
 	}
 	if (item->verifier && !item->verifier((char *)conf + item->offset, errmsg)) {
-		return false;
+		return HANDLE_CONF_FAIL;
 	}
 
 out:
 	conf->item_origins[item->number] = origin;
-	return true;
+	return HANDLE_CONF_OK;
 }
 
 static bool
 parse_line(const char *line, char **key, char **value, char **errmsg)
 {
-#define SKIP_WS(x) while (isspace(*x)) { ++x; }
+#define SKIP_WS(x) do { while (isspace(*x)) { ++x; } } while (false)
 
 	*key = NULL;
 	*value = NULL;
@@ -422,6 +142,7 @@ conf_create(void)
 	conf->compression_level = 6;
 	conf->cpp_extension = x_strdup("");
 	conf->debug = false;
+	conf->depend_mode = false;
 	conf->direct_mode = true;
 	conf->disable = false;
 	conf->extra_files_to_hash = x_strdup("");
@@ -429,7 +150,7 @@ conf_create(void)
 	conf->hash_dir = true;
 	conf->ignore_headers_in_manifest = x_strdup("");
 	conf->keep_comments_cpp = false;
-	conf->limit_multiple = 0.8f;
+	conf->limit_multiple = 0.8;
 	conf->log_file = x_strdup("");
 	conf->max_files = 0;
 	conf->max_size = (uint64_t)5 * 1000 * 1000 * 1000;
@@ -445,9 +166,8 @@ conf_create(void)
 	conf->stats = true;
 	conf->temporary_dir = x_strdup("");
 	conf->umask = UINT_MAX; // Default: don't set umask.
-	conf->unify = false;
-	conf->item_origins = x_malloc(CONFITEMS_TOTAL_KEYWORDS * sizeof(char *));
-	for (size_t i = 0; i < CONFITEMS_TOTAL_KEYWORDS; ++i) {
+	conf->item_origins = x_malloc(confitems_count() * sizeof(char *));
+	for (size_t i = 0; i < confitems_count(); ++i) {
 		conf->item_origins[i] = "default";
 	}
 	return conf;
@@ -477,7 +197,7 @@ conf_free(struct conf *conf)
 
 // Note: The path pointer is stored in conf, so path must outlive conf.
 //
-// On failure, if an I/O error occured errno is set approriately, otherwise
+// On failure, if an I/O error occurred errno is set appropriately, otherwise
 // errno is set to zero indicating that config itself was invalid.
 bool
 conf_read(struct conf *conf, const char *path, char **errmsg)
@@ -500,9 +220,12 @@ conf_read(struct conf *conf, const char *path, char **errmsg)
 		char *key;
 		char *value;
 		char *errmsg2;
+		enum handle_conf_result hcr = HANDLE_CONF_OK;
 		bool ok = parse_line(buf, &key, &value, &errmsg2);
 		if (ok && key) { // key == NULL if comment or blank line.
-			ok = handle_conf_setting(conf, key, value, &errmsg2, false, false, path);
+			hcr =
+				handle_conf_setting(conf, key, value, &errmsg2, NULL, false, path);
+			ok = hcr != HANDLE_CONF_FAIL; // unknown is OK
 		}
 		free(key);
 		free(value);
@@ -555,11 +278,11 @@ conf_update_from_environment(struct conf *conf, char **errmsg)
 			continue;
 		}
 
-		char *errmsg2;
-		bool ok = handle_conf_setting(
-			conf, env_to_conf_item->conf_name, q, &errmsg2, true, negate,
-			"environment");
-		if (!ok) {
+		char *errmsg2 = NULL;
+		enum handle_conf_result hcr = handle_conf_setting(
+			conf, env_to_conf_item->conf_name, q, &errmsg2,
+			env_to_conf_item->env_name, negate, "environment");
+		if (hcr != HANDLE_CONF_OK) {
 			*errmsg = format("%s: %s", key, errmsg2);
 			free(errmsg2);
 			free(key);
@@ -573,8 +296,8 @@ conf_update_from_environment(struct conf *conf, char **errmsg)
 }
 
 bool
-conf_set_value_in_file(const char *path, const char *key, const char *value,
-                       char **errmsg)
+conf_set_value_in_file(const char *conf_path, const char *key,
+                       const char *value, char **errmsg)
 {
 	const struct conf_item *item = find_conf(key);
 	if (!item) {
@@ -582,9 +305,20 @@ conf_set_value_in_file(const char *path, const char *key, const char *value,
 		return false;
 	}
 
+	char parsed[8] = {0}; // The maximum entry size in struct conf.
+	if (!item->parser(value, (void *)parsed, errmsg)
+	    || (item->verifier && !item->verifier(&parsed, errmsg))) {
+		return false;
+	}
+
+	char *path = x_realpath(conf_path);
+	if (!path) {
+		path = x_strdup(conf_path);
+	}
 	FILE *infile = fopen(path, "r");
 	if (!infile) {
 		*errmsg = format("%s: %s", path, strerror(errno));
+		free(path);
 		return false;
 	}
 
@@ -593,6 +327,7 @@ conf_set_value_in_file(const char *path, const char *key, const char *value,
 	if (!outfile) {
 		*errmsg = format("%s: %s", outpath, strerror(errno));
 		free(outpath);
+		free(path);
 		fclose(infile);
 		return false;
 	}
@@ -622,9 +357,12 @@ conf_set_value_in_file(const char *path, const char *key, const char *value,
 	fclose(outfile);
 	if (x_rename(outpath, path) != 0) {
 		*errmsg = format("rename %s to %s: %s", outpath, path, strerror(errno));
+		free(outpath);
+		free(path);
 		return false;
 	}
 	free(outpath);
+	free(path);
 
 	return true;
 }
@@ -639,7 +377,7 @@ conf_print_value(struct conf *conf, const char *key,
 		return false;
 	}
 	void *value = (char *)conf + item->offset;
-	char *str = (char *)item->formatter(value);
+	char *str = item->formatter(value);
 	fprintf(file, "%s\n", str);
 	free(str);
 	return true;
@@ -656,7 +394,7 @@ print_item(struct conf *conf, const char *key,
 		return false;
 	}
 	void *value = (char *)conf + item->offset;
-	char *str = (char *)item->formatter(value);
+	char *str = item->formatter(value);
 	char *buf = x_strdup("");
 	reformat(&buf, "%s = %s", key, str);
 	printer(buf, conf->item_origins[item->number], context);
@@ -681,6 +419,7 @@ conf_print_items(struct conf *conf,
 	ok &= print_item(conf, "compression_level", printer, context);
 	ok &= print_item(conf, "cpp_extension", printer, context);
 	ok &= print_item(conf, "debug", printer, context);
+	ok &= print_item(conf, "depend_mode", printer, context);
 	ok &= print_item(conf, "direct_mode", printer, context);
 	ok &= print_item(conf, "disable", printer, context);
 	ok &= print_item(conf, "extra_files_to_hash", printer, context);
@@ -704,6 +443,5 @@ conf_print_items(struct conf *conf,
 	ok &= print_item(conf, "stats", printer, context);
 	ok &= print_item(conf, "temporary_dir", printer, context);
 	ok &= print_item(conf, "umask", printer, context);
-	ok &= print_item(conf, "unify", printer, context);
 	return ok;
 }

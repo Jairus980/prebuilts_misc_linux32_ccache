@@ -19,9 +19,6 @@
 /* Define to 1 if your compiler supports extern inline */
 #undef HAVE_EXTERN_INLINE
 
-/* Define to 1 if you have the `GetFinalPathNameByHandleW' function. */
-#undef HAVE_GETFINALPATHNAMEBYHANDLEW
-
 /* Define to 1 if you have the `gethostname' function. */
 #undef HAVE_GETHOSTNAME
 
@@ -46,6 +43,9 @@
 /* Define to 1 if you have the <locale.h> header file. */
 #undef HAVE_LOCALE_H
 
+/* Define to 1 if you have the `localtime_r' function. */
+#undef HAVE_LOCALTIME_R
+
 /* Define to 1 if the system has the type `long long'. */
 #undef HAVE_LONG_LONG
 
@@ -69,6 +69,9 @@
 
 /* Define to 1 if you have the `realpath' function. */
 #undef HAVE_REALPATH
+
+/* Define to 1 if you have the `setenv' function. */
+#undef HAVE_SETENV
 
 /* Define to 1 if you have a C99 compliant `snprintf' function. */
 #undef HAVE_SNPRINTF

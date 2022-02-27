@@ -35,6 +35,7 @@ non_3pp_sources = \
     src/cleanup.c \
     src/compopt.c \
     src/conf.c \
+    src/confitems.c \
     src/counters.c \
     src/execute.c \
     src/exitfn.c \
@@ -45,18 +46,22 @@ non_3pp_sources = \
     src/manifest.c \
     src/mdfour.c \
     src/stats.c \
-    src/unify.c \
     src/util.c
 generated_sources = \
+    src/confitems_lookup.c \
+    src/envtoconfitems_lookup.c \
     src/version.c
 3pp_sources = \
-     \
+    src/getopt_long.c \
     src/hashtable.c \
     src/hashtable_itr.c \
     src/murmurhashneutral2.c \
     src/snprintf.c
-base_sources = $(non_3pp_sources) $(generated_sources) $(3pp_sources)
+extra_sources = 
+base_sources = $(non_3pp_sources) $(generated_sources) $(3pp_sources) $(extra_sources)
 base_objs = $(base_sources:.c=.o)
+
+non_3pp_objs = $(non_3pp_sources:.c=.o)
 
 ccache_sources = src/main.c $(base_sources)
 ccache_objs = $(ccache_sources:.c=.o)
@@ -101,7 +106,7 @@ all: ccache$(EXEEXT)
 
 ccache$(EXEEXT): $(ccache_objs) $(extra_libs)
 	$(if $(quiet),@echo "  LD       $@")
-	$(Q)$(CC) $(all_cflags) -o $@ $(ccache_objs) $(LDFLAGS) $(extra_libs) $(LIBS)
+	$(Q)$(CC) -o $@ $(ccache_objs) $(LDFLAGS) $(extra_libs) $(LIBS)
 
 ccache.1: doc/ccache.1
 	$(if $(quiet),@echo "  CP       $@")
@@ -120,8 +125,9 @@ install: ccache$(EXEEXT) ccache.1
 clean:
 	rm -rf $(files_to_clean)
 
-conf.c: confitems_lookup.c envtoconfitems_lookup.c
+$(non_3pp_objs) $(test_objs): CFLAGS += 
 
+src/snprintf.o: CFLAGS += -Wno-implicit-fallthrough
 $(zlib_objs): CPPFLAGS += -include config.h
 $(zlib_objs): CFLAGS += -Wno-implicit-fallthrough
 
@@ -131,9 +137,9 @@ src/zlib/libz.a: $(zlib_objs)
 	$(if $(quiet),@echo "  RANLIB   $@")
 	$(Q)$(RANLIB) $@
 
-.PHONY: perf
-perf: ccache$(EXEEXT)
-	$(srcdir)/perf/perf.py --ccache ccache$(EXEEXT) $(CC) $(all_cppflags) $(all_cflags) $(srcdir)/src/ccache.c
+.PHONY: performance
+performance: ccache$(EXEEXT)
+	$(srcdir)/misc/performance --ccache ccache$(EXEEXT) $(CC) $(all_cppflags) $(all_cflags) $(srcdir)/src/ccache.c
 
 .PHONY: test
 test: ccache$(EXEEXT) unittest/run$(EXEEXT)
@@ -149,7 +155,7 @@ unittest: unittest/run$(EXEEXT)
 
 unittest/run$(EXEEXT): $(base_objs) $(test_objs) $(extra_libs)
 	$(if $(quiet),@echo "  LD       $@")
-	$(Q)$(CC) $(all_cflags) -o $@ $(base_objs) $(test_objs) $(LDFLAGS) $(extra_libs) $(LIBS)
+	$(Q)$(CC) -o $@ $(base_objs) $(test_objs) $(LDFLAGS) $(extra_libs) $(LIBS)
 
 unittest/main.o: unittest/suites.h
 

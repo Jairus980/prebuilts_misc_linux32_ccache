@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
-<meta name="generator" content="AsciiDoc 8.6.10" />
+<meta name="generator" content="AsciiDoc 9.0.0rc1" />
 <title>CCACHE(1)</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
@@ -436,7 +436,7 @@ thead, p.table.header {
 p.table {
   margin-top: 0;
 }
-/* Because the table frame attribute is overriden by CSS in most browsers. */
+/* Because the table frame attribute is overridden by CSS in most browsers. */
 div.tableblock > table[frame="void"] {
   border-style: none;
 }
@@ -735,7 +735,7 @@ asciidoc.install(2);
 <body class="article">
 <div id="header">
 <h1>CCACHE(1)</h1>
-<span id="revnumber">version 3.5</span>
+<span id="revnumber">version 3.7.12</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -907,13 +907,30 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
-<strong><code>-F, --max-files</code></strong>=<em>N</em>
+<strong><code>--dump-manifest</code></strong>=<em>PATH</em>
 </dt>
 <dd>
 <p>
-    Set the maximum number of files allowed in the cache. Use 0 for no limit.
-    The value is stored in a configuration file in the cache directory and
-    applies to all future compilations.
+    Dump manifest file at PATH in text format. This is only useful when
+    debugging ccache and its behavior.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong><code>-k, --get-config</code></strong>=<em>KEY</em>
+</dt>
+<dd>
+<p>
+    Print the value of configuration option <em>KEY</em>. See
+    <a href="#_configuration">CONFIGURATION</a> for more information.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong><code>--hash-file</code></strong>=<em>PATH</em>
+</dt>
+<dd>
+<p>
+    Print the hash (in format <code>&lt;MD4&gt;-&lt;size&gt;</code>) of the file at PATH. This is only
+    useful when debugging ccache and its behavior.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -922,6 +939,16 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 <dd>
 <p>
     Print an options summary page.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong><code>-F, --max-files</code></strong>=<em>N</em>
+</dt>
+<dd>
+<p>
+    Set the maximum number of files allowed in the cache. Use 0 for no limit.
+    The value is stored in a configuration file in the cache directory and
+    applies to all future compilations.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -937,21 +964,31 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </p>
 </dd>
 <dt class="hdlist1">
+<strong><code>--print-stats</code></strong>
+</dt>
+<dd>
+<p>
+    Print statistics counter IDs and corresponding values machine-parsable
+    (tab-separated) format.
+</p>
+</dd>
+<dt class="hdlist1">
 <strong><code>-o, --set-config</code></strong>=<em>KEY=VALUE</em>
 </dt>
 <dd>
 <p>
-    Set configuration <em>KEY</em> to <em>VALUE</em>. See <a href="#_configuration">CONFIGURATION</a>
-    for more information.
+    Set configuration option <em>KEY</em> to <em>VALUE</em>. See
+    <a href="#_configuration">CONFIGURATION</a> for more information.
 </p>
 </dd>
 <dt class="hdlist1">
-<strong><code>-p, --print-config</code></strong>
+<strong><code>-p, --show-config</code></strong>
 </dt>
 <dd>
 <p>
     Print current configuration options and from where they originate
-    (environment variable, configuration file or compile-time default).
+    (environment variable, configuration file or compile-time default) in
+    human-readable format.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -959,7 +996,8 @@ compiler options apply and you should refer to the compiler&#8217;s documentatio
 </dt>
 <dd>
 <p>
-    Print the current statistics summary for the cache.
+    Print a summary of configuration and statistics counters in human-readable
+    format.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1255,7 +1293,16 @@ the <strong>prefix_command</strong> setting if possible. See
     If true, enable the debug mode. The debug mode creates per-object debug
     files that are helpful when debugging unexpected cache misses. Note however
     that ccache performance will be reduced slightly. See
-    <a href="#_cache_debugging_">debugging</a> for more information. The default is false.
+    <a href="#_cache_debugging">debugging</a> for more information. The default is false.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong>depend_mode</strong> (<strong>CCACHE_DEPEND</strong> or <strong>CCACHE_NODEPEND</strong>, see <a href="#_boolean_values">Boolean values</a> above)
+</dt>
+<dd>
+<p>
+    If true, the depend mode will be used. The default is false. See
+    <a href="#_the_depend_mode">THE DEPEND MODE</a>.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1457,10 +1504,13 @@ might be incorrect.</p></div>
 <dd>
 <p>
     If true, ccache will attempt to use existing cached object files, but it
-    will not to try to add anything new to the cache. If you are using this
-    because your ccache directory is read-only, then you need to set
-    <strong>temporary_dir</strong> as otherwise ccache will fail to create temporary files.
+    will not add new results to the cache. Statistics counters will still be
+    updated, though, unless the <strong>stats</strong> option is set to <strong>false</strong>.
 </p>
+<div class="paragraph"><p>If you are using this because your ccache directory is read-only, you need to
+set <strong>temporary_dir</strong> since ccache will fail to create temporary files otherwise.
+You may also want to set <strong>stats = false</strong> to make ccache not even try to update
+stats files.</p></div>
 </dd>
 <dt class="hdlist1">
 <strong>read_only_direct</strong> (<strong>CCACHE_READONLY_DIRECT</strong> or <strong>CCACHE_NOREADONLY_DIRECT</strong>, see <a href="#_boolean_values">Boolean values</a> above)
@@ -1519,11 +1569,14 @@ still has to do <em>some</em> preprocessing (like macros).</p></div>
 <div class="content">
 <div class="dlist"><dl>
 <dt class="hdlist1">
-<strong>file_macro</strong>
+<strong>clang_index_store</strong>
 </dt>
 <dd>
 <p>
-    Ignore <code>__FILE__</code> being present in the source.
+    Ignore the Clang compiler option <strong>-index-store-path</strong> and its argument when
+    computing the manifest hash. This is useful if you use Xcode, which uses an
+    index store path derived from the local project path. Note that the index
+    store won&#8217;t be updated correctly on cache hits if you enable this option.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1550,7 +1603,7 @@ still has to do <em>some</em> preprocessing (like macros).</p></div>
 </dt>
 <dd>
 <p>
-    By default, ccache also will not cache a file if it includes a header whose
+    By default, ccache will not cache a file if it includes a header whose
     ctime is too new. This option disables that check.
 </p>
 </dd>
@@ -1564,13 +1617,13 @@ still has to do <em>some</em> preprocessing (like macros).</p></div>
 </p>
 </dd>
 <dt class="hdlist1">
-<strong>no_system_headers</strong>
+<strong>locale</strong>
 </dt>
 <dd>
 <p>
-    By default, ccache will also include all system headers in the manifest.
-    With this option set, ccache will only include system headers in the hash
-    but not add the system header files to the list of include files.
+    ccache includes the environment variables <strong>LANG</strong>, <strong>LC_ALL</strong>, <strong>LC_CTYPE</strong> and
+    <strong>LC_MESSAGES</strong> in the hash by default since they may affect localization of
+    compiler warning messages. Set this option to tell ccache not to do that.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1580,6 +1633,16 @@ still has to do <em>some</em> preprocessing (like macros).</p></div>
 <p>
     Be sloppy about <strong>#define</strong>s when precompiling a header file. See
     <a href="#_precompiled_headers">PRECOMPILED HEADERS</a> for more information.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong>system_headers</strong>
+</dt>
+<dd>
+<p>
+    By default, ccache will also include all system headers in the manifest.
+    With this option set, ccache will only include system headers in the hash
+    but not add the system header files to the list of include files.
 </p>
 </dd>
 <dt class="hdlist1">
@@ -1632,22 +1695,6 @@ information.</p></div>
     as the compiler). This is mostly useful when you wish to share your cache
     with other users. Note that this also affects the file permissions set on
     the object files created from your compilations.
-</p>
-</dd>
-<dt class="hdlist1">
-<strong>unify</strong> (<strong>CCACHE_UNIFY</strong> or <strong>CCACHE_NOUNIFY</strong>, see <a href="#_boolean_values">Boolean values</a> above)
-</dt>
-<dd>
-<p>
-    If true, ccache will use a C/C++ unifier when hashing the preprocessor
-    output if the <strong>-g</strong> option is not used. The unifier is slower than a normal
-    hash, so setting this environment variable loses a little bit of speed, but
-    it means that ccache can take advantage of not recompiling when the changes
-    to the source code consist of reformatting only. Note that enabling the
-    unifier changes the hash, so cached compilations produced when the unifier
-    is enabled cannot be reused when the unifier is disabled, and vice versa.
-    Enabling the unifier may result in incorrect line number information in
-    compiler warning messages and expansions of the <code>__LINE__</code> macro.
 </p>
 </dd>
 </dl></div>
@@ -1888,7 +1935,8 @@ nowadays too weak to be useful in cryptographic contexts, but it should be safe
 enough to be used to identify recompilations.) On a cache hit, ccache is able
 to supply all of the correct compiler outputs (including all warnings,
 dependency file, etc) from the cache.</p></div>
-<div class="paragraph"><p>ccache has two ways of doing the detection:</p></div>
+<div class="paragraph"><p>ccache has two ways of gathering information used to look up results in the
+cache:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1905,9 +1953,14 @@ the <strong>preprocessor mode</strong>, where ccache runs the preprocessor on th
 </ul></div>
 <div class="paragraph"><p>The direct mode is generally faster since running the preprocessor has some
 overhead.</p></div>
+<div class="paragraph"><p>If no previous result is detected (i.e., there is a cache miss) using the
+direct mode, ccache will fall back to the preprocessor mode unless the <strong>depend
+mode</strong> is enabled. In the depend mode, ccache never runs the preprocessor, not
+even on cache misses. Read more in <a href="#_the_depend_mode">THE DEPEND MODE</a>
+below.</p></div>
 <div class="sect2">
 <h3 id="_common_hashed_information">Common hashed information</h3>
-<div class="paragraph"><p>For both modes, the following information is included in the hash:</p></div>
+<div class="paragraph"><p>The following information is always included in the hash:</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2050,6 +2103,70 @@ any standard error output generated by the preprocessor
 </ul></div>
 <div class="paragraph"><p>Based on the hash, the cached compilation result can be looked up directly in
 the cache.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_the_depend_mode">The depend mode</h3>
+<div class="paragraph"><p>If the depend mode is enabled, ccache will not use the preprocessor at all. The
+hash used to identify results in the cache will be based on the direct mode
+hash described above plus information about include files read from the
+dependency file generated by the compiler with <strong>-MD</strong> or <strong>-MMD</strong>.</p></div>
+<div class="paragraph"><p>Advantages:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The ccache overhead of a cache miss will be much smaller.
+</p>
+</li>
+<li>
+<p>
+Not running the preprocessor at all can be good if compilation is performed
+  remotely, for instance when using distcc or similar; ccache then won&#8217;t make
+  potentially costly preprocessor calls on the local machine.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Disadvantages:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The cache hit rate will likely be lower since any change to compiler options
+  or source code will make the hash different. Compare this with the default
+  setup where ccache will fall back to the preprocessor mode, which is tolerant
+  to some types of changes of compiler options and source code changes.
+</p>
+</li>
+<li>
+<p>
+If -MD is used, the manifest entries will include system header files as
+  well, thus slowing down cache hits slightly, just as using -MD slows down
+  make.
+</p>
+</li>
+<li>
+<p>
+If -MMD is used, the manifest entries will not include system header files,
+  which means ccache will ignore changes in them.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>The depend mode will be disabled if any of the following holds:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+the configuration setting <strong>depend_mode</strong> is false
+</p>
+</li>
+<li>
+<p>
+the configuration setting <strong>run_second_cpp</strong> is false
+</p>
+</li>
+<li>
+<p>
+the compiler is not generating dependencies using <strong>-MD</strong> or <strong>-MMD</strong>
+</p>
+</li>
+</ul></div>
 </div>
 </div>
 </div>
@@ -2226,8 +2343,10 @@ You must either:
 <div class="ulist"><ul>
 <li>
 <p>
-use the <strong>-include</strong> compiler option to include the precompiled header
-   (i.e., don&#8217;t use <strong>#include</strong> in the source code to include the header); or
+use the <strong>-include</strong> compiler option to include the precompiled header (i.e.,
+   don&#8217;t use <strong>#include</strong> in the source code to include the header; the filename
+   itself must be sufficient to find the header, i.e. <strong>-I</strong> paths are not
+   searched); or
 </p>
 </li>
 <li>
@@ -2238,7 +2357,8 @@ use the <strong>-include</strong> compiler option to include the precompiled hea
 </li>
 <li>
 <p>
-add the <strong>-fpch-preprocess</strong> compiler option when compiling.
+(for the GCC compiler) add the <strong>-fpch-preprocess</strong> compiler option when
+   compiling.
 </p>
 </li>
 </ul></div>
@@ -2331,6 +2451,12 @@ ccache hasn&#8217;t been tested very thoroughly on NFS.
 </ul></div>
 <div class="paragraph"><p>A tip is to set <strong>temporary_dir</strong> to a directory on the local host to avoid NFS
 traffic for temporary files.</p></div>
+<div class="paragraph"><p>It is recommended to use the same operating system version when using a shared
+cache. If operating system versions are different then system include files
+will likely be different and there will be few or no cache hits between the
+systems. One way of improving cache hit rate in that case is to set
+<a href="#config_sloppiness"><strong>sloppiness</strong></a> to <strong>system_headers</strong> to ignore system
+headers.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -2408,9 +2534,10 @@ If ccache guesses that the compiler may emit colored warnings, then a
 <div class="sect2">
 <h3 id="_general">General</h3>
 <div class="paragraph"><p>A general tip for getting information about what ccache is doing is to enable
-debug logging by setting <strong>log_file</strong>. The log contains executed commands,
-important decisions that ccache makes, read and written files, etc. Another way
-of keeping track of what is happening is to check the output of <strong>ccache -s</strong>.</p></div>
+debug logging by setting the configuration option <strong>debug</strong> (or the environment
+variable <strong>CCACHE_DEBUG</strong>); see <a href="#_cache_debugging">debugging</a> for more
+information. Another way of keeping track of what is happening is to check the
+output of <strong>ccache -s</strong>.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_performance">Performance</h3>
@@ -2460,13 +2587,13 @@ This was the first compilation with a new value of the base directory
 <p>
 A modification time of one of the include files is too new (created the same
    second as the compilation is being done). This check is made to avoid a race
-   condition. To fix this, create the include file earlier in the build
-   process, if possible, or set <strong>sloppiness</strong> to <strong>include_file_mtime</strong> if you are
-   willing to take the risk. (The race condition consists of these events: the
-   preprocessor is run; an include file is modified by someone; the new include
-   file is hashed by ccache; the real compiler is run on the preprocessor&#8217;s
-   output, which contains data from the old header file; the wrong object file
-   is stored in the cache.)
+   condition. To fix this, create the include file earlier in the build process,
+   if possible, or set <strong>sloppiness</strong> to <strong>include_file_ctime, include_file_mtime</strong>
+   if you are willing to take the risk. (The race condition consists of these
+   events: the preprocessor is run; an include file is modified by someone; the
+   new include file is hashed by ccache; the real compiler is run on the
+   preprocessor&#8217;s output, which contains data from the old header file; the
+   wrong object file is stored in the cache.)
 </p>
 </li>
 <li>
@@ -2494,13 +2621,10 @@ The <code>__DATE__</code> preprocessor macro is (potentially) being used and the
 </li>
 <li>
 <p>
-The <code>__FILE__</code> preprocessor macro is (potentially) being used and the file
-   path has changed. If <code>__FILE__</code> is present in the source code, ccache hashes
-   the current input file path in order to be able to produce the correct
-   object file if the <code>__FILE__</code> macro affects the output. If you know that
-   <code>__FILE__</code> isn&#8217;t used in practise, or don&#8217;t care if ccache produces objects
-   where <code>__FILE__</code> is expanded to the wrong path, you can set <strong>sloppiness</strong> to
-   <strong>file_macro</strong>.
+The input file path has changed. ccache includes the input file path in the
+   direct mode hash to be able to take relative include files into account and
+   to produce a correct object file if the source code includes a <code>__FILE__</code>
+   macro.
 </p>
 </li>
 </ul></div>
@@ -2580,7 +2704,7 @@ case, please report it.</p></div>
 <h2 id="_more_information">More information</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Credits, mailing list information, bug reporting instructions, source code,
-etc, can be found on ccache&#8217;s web site: <a href="https://ccache.samba.org">https://ccache.samba.org</a>.</p></div>
+etc, can be found on ccache&#8217;s web site: <a href="https://ccache.dev">https://ccache.dev</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -2588,16 +2712,16 @@ etc, can be found on ccache&#8217;s web site: <a href="https://ccache.samba.org"
 <div class="sectionbody">
 <div class="paragraph"><p>ccache was originally written by Andrew Tridgell and is currently developed and
 maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
-<a href="https://ccache.samba.org/credits.html">https://ccache.samba.org/credits.html</a> for a list of contributors.</p></div>
+<a href="https://ccache.dev/credits.html">https://ccache.dev/credits.html</a> for a list of contributors.</p></div>
 </div>
 </div>
 </div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 3.5<br />
+Version 3.7.12<br />
 Last updated
- 2018-10-07 20:43:01 CEST
+ 2020-10-01 14:20:15 CEST
 </div>
 </div>
 </body>
