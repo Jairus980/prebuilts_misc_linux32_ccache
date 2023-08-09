@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: ccache
 .\"    Author: [see the "AUTHOR(S)" section]
-.\" Generator: Asciidoctor 2.0.10
-.\"      Date: 2022-05-15
+.\" Generator: Asciidoctor 2.0.16
+.\"      Date: 2023-06-12
 .\"    Manual: \ \&
-.\"    Source: Ccache 4.6.1
+.\"    Source: Ccache 4.8.2
 .\"  Language: English
 .\"
-.TH "CCACHE" "1" "2022-05-15" "Ccache 4.6.1" "\ \&"
+.TH "CCACHE" "1" "2023-06-12" "Ccache 4.8.2" "\ \&"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
 .ss \n[.ss] 0
@@ -31,13 +31,17 @@
 ccache \- a fast C/C++ compiler cache
 .SH "SYNOPSIS"
 .sp
-.sp
 .nf
-\fBccache\fP [\fIoptions\fP]
-\fBccache\fP \fIcompiler\fP [\fIcompiler options\fP]
-\fIcompiler\fP [\fIcompiler options\fP]                   (via symbolic link)
+\fBccache\fP [\fIccache options\fP]
+\fBccache\fP [\fIKEY\fP=\fIVALUE\fP ...] \fIcompiler\fP [\fIcompiler options\fP]
+\fIcompiler\fP [\fIcompiler options\fP]
 .fi
 .br
+.sp
+The first form takes options described in COMMAND LINE OPTIONS below. The
+second form invokes the compiler, optionally using configuration
+options as \fIKEY\fP=\fIVALUE\fP arguments. In the third form, ccache is masquerading
+as the compiler as described in RUN MODES.
 .SH "DESCRIPTION"
 .sp
 Ccache is a compiler cache. It speeds up recompilation by caching the result of
@@ -47,35 +51,71 @@ again.
 Ccache has been carefully written to always produce exactly the same compiler
 output that you would get without the cache. The only way you should be able to
 tell that you are using ccache is the speed. Currently known exceptions to this
-goal are listed under \fICaveats\fP. If you discover an undocumented case where
+goal are listed under \fICAVEATS\fP. If you discover an undocumented case where
 ccache changes the output of your compiler, please let us know.
 .SH "RUN MODES"
 .sp
-There are two ways to use ccache. You can either prefix your compilation
-commands with \fBccache\fP or you can let ccache masquerade as the compiler by
-creating a symbolic link (named as the compiler) to ccache. The first method is
-most convenient if you just want to try out ccache or wish to use it for some
-specific projects. The second method is most useful for when you wish to use
-ccache for all your compilations.
+There are two different ways to use ccache to cache a compilation:
 .sp
-To use the first method, just make sure that \fBccache\fP is in your \fBPATH\fP.
-.sp
-To use the symlinks method, do something like this:
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 1." 4.2
+.\}
+Prefix your compilation command with \fBccache\fP. This method is most convenient
+if you just want to try out ccache or wish to use it for some specific
+projects. Example:
 .sp
 .if n .RS 4
 .nf
+.fam C
+ccache gcc \-c example.c
+.fam
+.fi
+.if n .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 2." 4.2
+.\}
+Let ccache masquerade as the compiler. This method is most useful when you
+wish to use ccache for all your compilations. To do this, create a symbolic
+link to ccache named as the compiler. For example, here is set up ccache to
+masquerade as \fBgcc\fP and \fBg++\fP:
+.sp
+.if n .RS 4
+.nf
+.fam C
 cp ccache /usr/local/bin/
 ln \-s ccache /usr/local/bin/gcc
 ln \-s ccache /usr/local/bin/g++
-ln \-s ccache /usr/local/bin/cc
-ln \-s ccache /usr/local/bin/c++
+.fam
 .fi
 .if n .RE
 .sp
-And so forth. This will work as long as the directory with symlinks comes
-before the path to the compiler (which is usually in \fB/usr/bin\fP). After
-installing you may wish to run \(lqwhich gcc\(rq to make sure that the correct link
-is being used.
+On platforms that don\(cqt support symbolic links you can simply copy ccache to the
+compiler name instead for a similar effect:
+.sp
+.if n .RS 4
+.nf
+.fam C
+cp ccache /usr/local/bin/gcc
+cp ccache /usr/local/bin/g++
+.fam
+.fi
+.if n .RE
+.sp
+And so forth. This will work as long as the directory with symbolic links or
+ccache copies comes before the directory with the compiler (typically
+\fB/usr/bin\fP) in \fBPATH\fP.
 .if n .sp
 .RS 4
 .it 1 an-trap
@@ -89,40 +129,28 @@ is being used.
 .sp
 The technique of letting ccache masquerade as the compiler works well,
 but currently doesn\(cqt interact well with other tools that do the same thing. See
-\fIUsing ccache with other compiler wrappers\fP.
+\fIUSING CCACHE WITH OTHER COMPILER WRAPPERS\fP.
 .sp .5v
 .RE
-.if n .sp
-.RS 4
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-.B Warning
-.ps -1
-.br
-.sp
-Use a symbolic links for masquerading, not hard links.
-.sp .5v
 .RE
 .SH "COMMAND LINE OPTIONS"
 .sp
-These command line options only apply when you invoke ccache as \(lqccache\(rq.
-When invoked as a compiler (via a symlink as described in the previous
-section), the normal compiler options apply and you should refer to the
-compiler\(cqs documentation.
+These command line options only apply when you invoke ccache as \(lqccache\(rq. When
+ccache masquerades as a compiler (as described in the previous section), the
+normal compiler options apply and you should refer to the compiler\(cqs
+documentation.
 .SS "Common options"
 .sp
 \fB\-c\fP, \fB\-\-cleanup\fP
 .RS 4
-Clean up the cache by removing old cached files until the specified file
-number and cache size limits are not exceeded. This also recalculates the
-cache file count and size totals. Normally, there is no need to initiate
-cleanup manually as ccache keeps the cache below the specified limits at
-runtime and keeps statistics up to date on each compilation. Forcing a
-cleanup is mostly useful if you manually modify the cache contents or
-believe that the cache size statistics may be inaccurate.
+Clean up the cache by removing not recently used cached files until the
+specified file number and cache size limits are not exceeded. This also
+recalculates the cache file count and size totals. Normally, there is no
+need to initiate cleanup manually as ccache keeps the cache below the
+specified limits at runtime and keeps statistics up to date on each
+compilation. Forcing a cleanup is mostly useful if you have modified the
+cache contents manually or believe that the cache size statistics may be
+inaccurate.
 .RE
 .sp
 \fB\-C\fP, \fB\-\-clear\fP
@@ -155,9 +183,9 @@ cache.
 .sp
 \fB\-\-evict\-older\-than\fP \fIAGE\fP
 .RS 4
-Remove files older than \fIAGE\fP from the cache. \fIAGE\fP should be an unsigned
-integer with a \fBd\fP (days) or \fBs\fP (seconds) suffix. If combined with
-\fB\-\-evict\-namespace\fP, only remove old files within that namespace.
+Remove files used less recently than \fIAGE\fP from the cache. \fIAGE\fP should be
+an unsigned integer with a \fBd\fP (days) or \fBs\fP (seconds) suffix. If combined
+with \fB\-\-evict\-namespace\fP, only remove files within that namespace.
 .RE
 .sp
 \fB\-h\fP, \fB\-\-help\fP
@@ -175,34 +203,40 @@ and applies to all future compilations.
 \fB\-M\fP \fISIZE\fP, \fB\-\-max\-size\fP \fISIZE\fP
 .RS 4
 Set the maximum size of the files stored in the cache. \fISIZE\fP should be a
-number followed by an optional suffix: k, M, G, T (decimal), Ki, Mi, Gi or
-Ti (binary). The default suffix is G. Use 0 for no limit. The value is
-stored in a configuration file in the cache directory and applies to all
-future compilations.
+number followed by an optional suffix: kB, MB, GB, TB (decimal), KiB, MiB,
+GiB or TiB (binary). The default suffix is GiB. Use 0 for no limit. The
+value is stored in a configuration file in the cache directory and applies
+to all future compilations.
 .RE
 .sp
 \fB\-X\fP \fILEVEL\fP, \fB\-\-recompress\fP \fILEVEL\fP
 .RS 4
 Recompress the cache to level \fILEVEL\fP using the Zstandard algorithm. The
 level can be an integer, with the same semantics as the
-\fBcompression_level\fP configuration option), or
-the special value \fBuncompressed\fP for no compression. See
-\fICache compression\fP for more information. This can potentionally take a
-long time since all files in the cache need to be visited. Only files that
-are currently compressed with a different level than \fILEVEL\fP will be
+\fBcompression_level\fP configuration option, or
+the special value \fBuncompressed\fP for no compression. See \fI[Cache
+compression]\fP for more information. This can potentially take a long time
+since all files in the cache need to be visited. Only files that are
+currently compressed with a different level than \fILEVEL\fP will be
 recompressed.
+.RE
+.sp
+\fB\-\-recompress\-threads\fP \fITHREADS\fP
+.RS 4
+Use up to \fITHREADS\fP threads when recompressing the cache. The default is to
+use one thread per CPU.
 .RE
 .sp
 \fB\-o\fP \fIKEY=VALUE\fP, \fB\-\-set\-config\fP \fIKEY\fP=\fIVALUE\fP
 .RS 4
-Set configuration option \fIKEY\fP to \fIVALUE\fP. See \fIConfiguration\fP for more
+Set configuration option \fIKEY\fP to \fIVALUE\fP. See \fICONFIGURATION\fP for more
 information.
 .RE
 .sp
 \fB\-x\fP, \fB\-\-show\-compression\fP
 .RS 4
-Print cache compression statistics. See \fICache compression\fP for more
-information. This can potentionally take a long time since all files in the
+Print cache compression statistics. See \fICACHE COMPRESSION\fP for more
+information. This can potentially take a long time since all files in the
 cache need to be visited.
 .RE
 .sp
@@ -240,12 +274,12 @@ Print version and copyright information.
 .RS 4
 Zero the cache statistics (but not the configuration options).
 .RE
-.SS "Options for secondary storage"
+.SS "Options for remote file\-based storage"
 .sp
 \fB\-\-trim\-dir\fP \fIPATH\fP
 .RS 4
-Remove old files from directory \fIPATH\fP until it is at most the size specified
-by \fB\-\-trim\-max\-size\fP.
+Remove not recently used files from directory \fIPATH\fP until it is at most the
+size specified by \fB\-\-trim\-max\-size\fP.
 .if n .sp
 .RS 4
 .it 1 an-trap
@@ -257,17 +291,17 @@ by \fB\-\-trim\-max\-size\fP.
 .ps -1
 .br
 .sp
-Don\(cqt use this option to trim the primary cache. To trim the primary
-cache directory to a certain size, use \fBCCACHE_MAXSIZE=\fISIZE\fP ccache \-c\fP.
+Don\(cqt use this option to trim the local cache. To trim the local cache
+directory to a certain size, use \fBCCACHE_MAXSIZE=\fISIZE\fP ccache \-c\fP.
 .sp .5v
 .RE
 .RE
 .sp
 \fB\-\-trim\-max\-size\fP \fISIZE\fP
 .RS 4
-Specify the maximum size for \fB\-\-trim\-dir\fP. \fISIZE\fP should be a number followed
-by an optional suffix: k, M, G, T (decimal), Ki, Mi, Gi or Ti (binary). The
-default suffix is G.
+Specify the maximum size for \fB\-\-trim\-dir\fP. \fISIZE\fP should be a number
+followed by an optional suffix: kB, MB, GB, TB (decimal), KiB, MiB, GiB or
+TiB (binary). The default suffix is GiB. Use 0 for no limit.
 .RE
 .sp
 \fB\-\-trim\-method\fP \fIMETHOD\fP
@@ -285,6 +319,24 @@ default.
 .RS 4
 LRU (least recently used) using the file modification timestamp.
 .RE
+.RE
+.sp
+\fB\-\-trim\-recompress\fP \fILEVEL\fP
+.RS 4
+Recompress to level \fILEVEL\fP using the Zstandard algorithm when using
+\fB\-\-trim\-dir\fP. The level can be an integer, with the same semantics as the
+\fBcompression_level\fP configuration option, or
+the special value \fBuncompressed\fP for no compression. See \fI[Cache
+compression]\fP for more information. This can potentially take a long time
+since all files in the cache need to be visited. Only files that are
+currently compressed with a different level than \fILEVEL\fP will be
+recompressed.
+.RE
+.sp
+\fB\-\-trim\-recompress\-threads\fP \fITHREADS\fP
+.RS 4
+Recompress using up to \fITHREADS\fP threads with \fB\-\-trim\-recompress\fP. The
+default is to use one thread per CPU.
 .RE
 .SS "Options for scripting or debugging"
 .sp
@@ -304,7 +356,7 @@ behavior.
 .sp
 \fB\-k\fP \fIKEY\fP, \fB\-\-get\-config\fP \fIKEY\fP
 .RS 4
-Print the value of configuration option \fIKEY\fP. See \fIConfiguration\fP for
+Print the value of configuration option \fIKEY\fP. See \fICONFIGURATION\fP for
 more information.
 .RE
 .sp
@@ -379,7 +431,15 @@ highest):
 .  sp -1
 .  IP " 1." 4.2
 .\}
-Environment variables.
+Command line settings in \fIKEY\fP=\fIVALUE\fP form. Example:
+.sp
+.if n .RS 4
+.nf
+.fam C
+ccache debug=true compiler_check="%compiler% \-\-version" gcc \-c example.c
+.fam
+.fi
+.if n .RE
 .RE
 .sp
 .RS 4
@@ -390,7 +450,7 @@ Environment variables.
 .  sp -1
 .  IP " 2." 4.2
 .\}
-The primary (cache\-specific) configuration file (see below).
+Environment variables.
 .RE
 .sp
 .RS 4
@@ -401,9 +461,7 @@ The primary (cache\-specific) configuration file (see below).
 .  sp -1
 .  IP " 3." 4.2
 .\}
-The secondary (system\-wide read\-only) configuration file
-\fB<sysconfdir>/ccache.conf\fP (typically \fB/etc/ccache.conf\fP or
-\fB/usr/local/etc/ccache.conf\fP).
+The cache\-specific configuration file (see below).
 .RE
 .sp
 .RS 4
@@ -414,16 +472,28 @@ The secondary (system\-wide read\-only) configuration file
 .  sp -1
 .  IP " 4." 4.2
 .\}
+The system (read\-only) configuration file \fB<sysconfdir>/ccache.conf\fP
+(typically \fB/etc/ccache.conf\fP or \fB/usr/local/etc/ccache.conf\fP).
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 5.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 5." 4.2
+.\}
 Compile\-time defaults.
 .RE
 .sp
-As a special case, if the the environment variable \fBCCACHE_CONFIGPATH\fP is set
-it specifies the primary configuration file and the secondary (system\-wide)
-configuration file won\(cqt be read.
-.SS "Location of the primary configuration file"
+As a special case, if the environment variable \fBCCACHE_CONFIGPATH\fP is set it
+specifies the configuration file, and the system configuration file won\(cqt be
+read.
+.SS "Location of the configuration file"
 .sp
-The location of the primary (cache\-specific) configuration is determined like
-this:
+The location of the cache\-specific configuration file is determined like this on
+non\-Windows systems:
 .sp
 .RS 4
 .ie n \{\
@@ -456,8 +526,8 @@ Otherwise, if the environment variable \fBCCACHE_DIR\fP is set then use
 .  sp -1
 .  IP " 3." 4.2
 .\}
-Otherwise, if \fBcache_dir\fP is set in the secondary
-(system\-wide) configuration file then use \fB<cache_dir>/ccache.conf\fP.
+Otherwise, if \fBcache_dir\fP is set in the system
+configuration file then use \fB<cache_dir>/ccache.conf\fP.
 .RE
 .sp
 .RS 4
@@ -492,10 +562,87 @@ Otherwise, if \fBXDG_CONFIG_HOME\fP is set then use
 .  sp -1
 .  IP " 6." 4.2
 .\}
-Otherwise, use \fB%APPDATA%/ccache/ccache.conf\fP (Windows),
+Otherwise, use
 \fB$HOME/Library/Preferences/ccache/ccache.conf\fP (macOS) or
 \fB$HOME/.config/ccache/ccache.conf\fP (other systems).
 .RE
+.sp
+On Windows, this is the method used to find the configuration file:
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 1." 4.2
+.\}
+If \fBCCACHE_CONFIGPATH\fP is set, use that path.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 2." 4.2
+.\}
+Otherwise, if the environment variable \fBCCACHE_DIR\fP is set then use
+\fB%CCACHE_DIR%/ccache.conf\fP.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 3." 4.2
+.\}
+Otherwise, if \fBcache_dir\fP is set in the system
+configuration file then use \fB<cache_dir>\(rsccache.conf\fP. The
+system\-wide configuration on Windows is
+\fB%ALLUSERSPROFILE%\(rsccache\(rsccache.conf\fP by default. The \fBALLUSERSPROFILE\fP
+environment variable is usually \fBC:\(rsProgramData\fP.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 4.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 4." 4.2
+.\}
+Otherwise, if there is a legacy \fB%USERPROFILE%\(rs.ccache\fP directory then use
+\fB%USERPROFILE%\(rs.ccache\(rsccache.conf\fP.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 5.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 5." 4.2
+.\}
+Otherwise, use \fB%LOCALAPPDATA%\(rsccache\(rsccache.conf\fP if it exists.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 6.\h'+01'\c
+.\}
+.el \{\
+.  sp -1
+.  IP " 6." 4.2
+.\}
+Otherwise, use \fB%APPDATA%\(rsccache\(rsccache.conf\fP.
+.RE
+.sp
+See also the \fBcache_dir\fP configuration option for how the
+cache directory location is determined.
 .SS "Configuration file syntax"
 .sp
 Configuration files are in a simple \(lqkey = value\(rq format, one option per
@@ -504,8 +651,10 @@ is whitespace surrounding keys and values. Example:
 .sp
 .if n .RS 4
 .nf
+.fam C
 # Set maximum cache size to 10 GB:
 max_size = 10G
+.fam
 .fi
 .if n .RE
 .SS "Boolean values"
@@ -574,7 +723,7 @@ rewrite absolute paths into paths relative to the current working directory,
 but only absolute paths that begin with \fBbase_dir\fP. Cache results can then
 be shared for compilations in different directories even if the project uses
 absolute paths in the compiler command line. See also the discussion under
-\fICompiling in different directories\fP. If set to the empty string (which
+\fICOMPILING IN DIFFERENT DIRECTORIES\fP. If set to the empty string (which
 is the default), no rewriting is done.
 .sp
 A typical path to use as \fBbase_dir\fP is your home directory or another directory
@@ -587,7 +736,9 @@ For example, say that Alice\(cqs current working directory is
 .sp
 .if n .RS 4
 .nf
+.fam C
 ccache gcc \-I/usr/include/example \-I/home/alice/project2/include \-c /home/alice/project1/src/example.c
+.fam
 .fi
 .if n .RE
 .sp
@@ -595,6 +746,7 @@ Here is what ccache will actually execute for different \fBbase_dir\fP values:
 .sp
 .if n .RS 4
 .nf
+.fam C
 # Current working directory: /home/alice/project1/build
 
 # With base_dir = /:
@@ -605,6 +757,7 @@ gcc \-I/usr/include/example \-I../../project2/include \-c ../src/example.c
 
 # With base_dir = /home/alice/project1 or /home/alice/project1/src:
 gcc \-I/usr/include/example \-I/home/alice/project2/include \-c ../src/example.c
+.fam
 .fi
 .if n .RE
 .sp
@@ -615,10 +768,12 @@ identical to that of Alice:
 .sp
 .if n .RS 4
 .nf
+.fam C
 # Current working directory: /home/bob/stuff/project1/build
 
 # With base_dir = /home or /home/bob:
 gcc \-I/usr/include/example \-I../../project2/include \-c ../src/example.c
+.fam
 .fi
 .if n .RE
 .sp
@@ -650,15 +805,33 @@ relative paths in the first place instead instead of using \fBbase_dir\fP.
 \fBcache_dir\fP (\fBCCACHE_DIR\fP)
 .RS 4
 This option specifies where ccache will keep its cached compiler outputs.
-The default is \fB$XDG_CACHE_HOME/ccache\fP if \fBXDG_CACHE_HOME\fP is set,
-otherwise \fB%APPDATA%/ccache\fP (Windows), \fB$HOME/Library/Caches/ccache\fP
-(macOS) or \fB$HOME/.config/ccache\fP (other systems). Exception: If the legacy
-directory \fB$HOME/.ccache\fP exists then that directory is the default.
 .sp
-See also \fILocation of the primary configuration file\fP.
+On non\-Windows systems, the default is \fB$HOME/.ccache\fP if such a directory
+exists, otherwise \fB$XDG_CACHE_HOME/ccache\fP if \fBXDG_CACHE_HOME\fP is set, otherwise
+\fB$HOME/Library/Caches/ccache\fP (macOS) or \fB$HOME/.config/ccache\fP (other systems).
 .sp
-If you want to use another \fBCCACHE_DIR\fP value temporarily for one ccache
-invocation you can use the \fB\-d\fP/\fB\-\-dir\fP command line option instead.
+On Windows, the default is \fB%USERPROFILE%\(rs.ccache\fP if such a directory exists,
+otherwise \fB%LOCALAPPDATA%\(rsccache\fP.
+.if n .sp
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+.B Warning
+.ps -1
+.br
+.sp
+Previous ccache versions defaulted to storing the cache in
+\fB%APPDATA%\(rsccache\fP on Windows. This can result in large network file transfers
+of the cache in domain environments and similar problems. Please check this
+directory for cache directories and either delete them or the whole directory,
+or move them to the \fB%LOCALAPPDATA%\(rsccache\fP directory.
+.sp .5v
+.RE
+.sp
+See also \fILocation of the configuration file\fP.
 .RE
 .sp
 \fBcompiler\fP (\fBCCACHE_COMPILER\fP or (deprecated) \fBCCACHE_CC\fP)
@@ -715,13 +888,17 @@ separator. Examples:
 .sp
 .if n .RS 4
 .nf
+.fam C
 %compiler% \-v
+.fam
 .fi
 .if n .RE
 .sp
 .if n .RS 4
 .nf
+.fam C
 %compiler% \-dumpmachine; %compiler% \-dumpversion
+.fam
 .fi
 .if n .RE
 .sp
@@ -738,7 +915,7 @@ that ccache won\(cqt be able to detect a compiler upgrade. Using a suitable comm
 to identify the compiler is thus safer, but it\(cqs also slower, so you should
 consider continue using the \fBmtime\fP method in combination with the
 \fBprefix_command\fP option if possible. See
-\fIUsing ccache with other compiler wrappers\fP.
+\fIUSING CCACHE WITH OTHER COMPILER WRAPPERS\fP.
 .RE
 .RE
 .sp
@@ -770,6 +947,11 @@ clang\-cl.
 GCC\-based compiler.
 .RE
 .sp
+\fBicl\fP
+.RS 4
+Intel compiler on Windows.
+.RE
+.sp
 \fBmsvc\fP
 .RS 4
 Microsoft Visual C++ (MSVC).
@@ -783,11 +965,6 @@ NVCC (CUDA) compiler.
 \fBother\fP
 .RS 4
 Any compiler other than the known types.
-.RE
-.sp
-\fBpump\fP
-.RS 4
-distcc\(cqs \(lqpump\(rq script.
 .RE
 .RE
 .sp
@@ -847,7 +1024,7 @@ The value \fB0\fP means that ccache will choose a suitable level, currently
 .RE
 .sp
 See the \c
-.URL "http://zstd.net" "Zstandard documentation" " "
+.URL "http://zstd.net" "Zstandard documentation" ""
 for more information.
 .RE
 .sp
@@ -864,7 +1041,7 @@ compiled, but that sometimes doesn\(cqt work. For example, when using the
 .RS 4
 If true, enable the debug mode. The debug mode creates per\-object debug
 files that are helpful when debugging unexpected cache misses. Note however
-that ccache performance will be reduced slightly. See \fICache debugging\fP
+that ccache performance will be reduced slightly. See \fICACHE DEBUGGING\fP
 for more information. The default is false.
 .RE
 .sp
@@ -879,7 +1056,7 @@ The default is the empty string.
 For example, if \fBdebug_dir\fP is set to \fB/example\fP, the current working directory
 is \fB/home/user\fP and the object file is \fBbuild/output.o\fP then the debug log will
 be written to \fB/example/home/user/build/output.o.ccache\-log\fP. See also
-\fICache debugging\fP.
+\fICACHE DEBUGGING\fP.
 .RE
 .sp
 \fBdepend_mode\fP (\fBCCACHE_DEPEND\fP or \fBCCACHE_NODEPEND\fP, see \fIBoolean values\fP above)
@@ -898,6 +1075,9 @@ If true, the direct mode will be used. The default is true. See
 .RS 4
 When true, ccache will just call the real compiler, bypassing the cache
 completely. The default is false.
+.sp
+It is also possible to disable ccache for a specific source code file by adding
+the string \fBccache:disable\fP in a comment in the first 4096 bytes of the file.
 .RE
 .sp
 \fBextra_files_to_hash\fP (\fBCCACHE_EXTRAFILES\fP)
@@ -961,7 +1141,7 @@ version 4.0, ccache makes stored and fetched object files read\-only as a
 safety measure. Furthermore, a simple integrity check is made for cached
 object files by verifying that their sizes are correct. This means that
 mistakes like \fBstrip file.o\fP or \fBecho >file.o\fP will be detected even if the
-object file is made writeable, but a modification that doesn\(cqt change the file
+object file is made writable, but a modification that doesn\(cqt change the file
 size will not.
 .RE
 .sp
@@ -1004,7 +1184,7 @@ when generating debug info (compiler option \fB\-g\fP with variations).
 Exception: The CWD will not be included in the hash if
 \fBbase_dir\fP is set (and matches the CWD) and the
 compiler option \fB\-fdebug\-prefix\-map\fP is used. See also the discussion under
-\fICompiling in different directories\fP.
+\fICOMPILING IN DIFFERENT DIRECTORIES\fP.
 .sp
 The reason for including the CWD in the hash by default is to prevent a problem
 with the storage of the current working directory in the debug info of an
@@ -1038,27 +1218,32 @@ example, \fB\-fmessage\-length=*\fP will match both \fB\-fmessage\-length=20\fP 
 .sp
 \fBinode_cache\fP (\fBCCACHE_INODECACHE\fP or \fBCCACHE_NOINODECACHE\fP, see \fIBoolean values\fP above)
 .RS 4
-If true, enables caching of source file hashes based on device, inode and
-timestamps. This will reduce the time spent on hashing included files as
-the result can be resused between compilations.
+If true, ccache will cache source file hashes based on device, inode and
+timestamps. This reduces the time spent on hashing include files since the
+result can be reused between compilations. The default is true. The feature
+requires \fBtemporary_dir\fP to be located on a local
+filesystem of a supported type.
+.if n .sp
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+.B Note
+.ps -1
+.br
 .sp
-The feature is still experimental and thus off by default. It is currently not
-available on Windows.
-.sp
-The feature requires \fBtemporary_dir\fP to be located on a local filesystem.
+The inode cache feature is currently not available on Windows.
+.sp .5v
+.RE
 .RE
 .sp
 \fBkeep_comments_cpp\fP (\fBCCACHE_COMMENTS\fP or \fBCCACHE_NOCOMMENTS\fP, see \fIBoolean values\fP above)
 .RS 4
 If true, ccache will not discard the comments before hashing preprocessor
-output. This can be used to check documentation with \fB\-Wdocumentation\fP.
-.RE
-.sp
-\fBlimit_multiple\fP (\fBCCACHE_LIMIT_MULTIPLE\fP)
-.RS 4
-Sets the limit when cleaning up. Files are deleted (in LRU order) until the
-levels are below the limit. The default is 0.8 (= 80%). See
-\fIAutomatic cleanup\fP for more information.
+output. The default is false. This can be used to check documentation with
+\fB\-Wdocumentation\fP.
 .RE
 .sp
 \fBlog_file\fP (\fBCCACHE_LOGFILE\fP)
@@ -1072,10 +1257,12 @@ file in \fB/etc/rsyslog.d\fP:
 .sp
 .if n .RS 4
 .nf
+.fam C
 # log ccache to file
 :programname, isequal, "ccache"         /var/log/ccache
 # remove from syslog
 & ~
+.fam
 .fi
 .if n .RE
 .RE
@@ -1083,7 +1270,7 @@ file in \fB/etc/rsyslog.d\fP:
 \fBmax_files\fP (\fBCCACHE_MAXFILES\fP)
 .RS 4
 This option specifies the maximum number of files to keep in the cache. Use
-0 for no limit (which is the default). See also \fICache size management\fP.
+0 for no limit (which is the default). See also \fICACHE SIZE MANAGEMENT\fP.
 .RE
 .sp
 \fBmax_size\fP (\fBCCACHE_MAXSIZE\fP)
@@ -1091,7 +1278,14 @@ This option specifies the maximum number of files to keep in the cache. Use
 This option specifies the maximum size of the cache. Use 0 for no limit. The
 default value is 5G. Available suffixes: k, M, G, T (decimal) and Ki, Mi,
 Gi, Ti (binary). The default suffix is G. See also
-\fICache size management\fP.
+\fICACHE SIZE MANAGEMENT\fP.
+.RE
+.sp
+\fBmsvc_dep_prefix\fP (\fBCCACHE_MSVC_DEP_PREFIX\fP)
+.RS 4
+This option specifies the prefix of included files output for MSVC compiler.
+The default prefix is \(lqNote: including file:\(rq. If you use a localized
+compiler, this should be set accordingly.
 .RE
 .sp
 \fBnamespace\fP (\fBCCACHE_NAMESPACE\fP)
@@ -1099,11 +1293,11 @@ Gi, Ti (binary). The default suffix is G. See also
 If set, the namespace string will be added to the hashed data for each
 compilation. This will make the associated cache entries logically separate
 from cache entries with other namespaces, but they will still share the same
-storage space. Cache entries can also be selectively removed from the
-primary cache with the command line option \fB\-\-evict\-namespace\fP, potentially
-in combination with \fB\-\-evict\-older\-than\fP.
+storage space. Cache entries can also be selectively removed from the local
+cache with the command line option \fB\-\-evict\-namespace\fP, potentially in
+combination with \fB\-\-evict\-older\-than\fP.
 .sp
-For instance, if you use the same primary cache for several disparate projects,
+For instance, if you use the same local cache for several disparate projects,
 you can use a unique namespace string for each one. This allows you to remove
 cache entries that belong to a certain project if you stop working with that
 project.
@@ -1131,7 +1325,7 @@ penalty of hashing very large files.
 .RS 4
 This option adds a list of prefixes (separated by space) to the command line
 that ccache uses when invoking the compiler. See also
-\fIUsing ccache with other compiler wrappers\fP.
+\fIUSING CCACHE WITH OTHER COMPILER WRAPPERS\fP.
 .RE
 .sp
 \fBprefix_command_cpp\fP (\fBCCACHE_PREFIX_CPP\fP)
@@ -1167,42 +1361,20 @@ If true, ccache will not use any previously stored result. New results will
 still be cached, possibly overwriting any pre\-existing results.
 .RE
 .sp
-\fBreshare\fP (\fBCCACHE_RESHARE\fP or \fBCCACHE_NORESHARE\fP, see \fIBoolean values\fP above)
+\fBremote_only\fP (\fBCCACHE_REMOTE_ONLY\fP or \fBCCACHE_NOREMOTE_ONLY\fP, see \fIBoolean values\fP above)
 .RS 4
-If true, ccache will write results to secondary storage even for primary
-storage cache hits. The default is false.
+If true, ccache will only use remote storage. The
+default is false. Note that cache statistics counters will still be kept in
+the local cache directory unless \fBstats\fP is false. See also
+\fIStorage interaction\fP.
 .RE
 .sp
-\fBrun_second_cpp\fP (\fBCCACHE_CPP2\fP or \fBCCACHE_NOCPP2\fP, see \fIBoolean values\fP above)
-.RS 4
-If true, ccache will first run the preprocessor to preprocess the source
-code (see \fIThe preprocessor mode\fP) and then on a cache miss run the
-compiler on the source code to get hold of the object file. This is the
-default.
-.sp
-If false, ccache will first run preprocessor to preprocess the source code and
-then on a cache miss run the compiler on the \fIpreprocessed source code\fP instead
-of the original source code. This makes cache misses slightly faster since the
-source code only has to be preprocessed once. The downside is that some
-compilers won\(cqt produce the same result (for instance diagnostics warnings)
-when compiling preprocessed source code.
-.sp
-A solution to the above mentioned downside is to set \fBrun_second_cpp\fP to false
-and pass \fB\-fdirectives\-only\fP (for GCC) or \fB\-frewrite\-includes\fP (for Clang) to
-the compiler. This will cause the compiler to leave the macros and other
-preprocessor information, and only process the \fB#include\fP directives. When run
-in this way, the preprocessor arguments will be passed to the compiler since it
-still has to do \fIsome\fP preprocessing (like macros).
-.sp
-This option is ignored with MSVC, as there is no way to make it compile without
-preprocessing first.
-.RE
-.sp
-\fBsecondary_storage\fP (\fBCCACHE_SECONDARY_STORAGE\fP)
+\fBremote_storage\fP (\fBCCACHE_REMOTE_STORAGE\fP)
 .RS 4
 This option specifies one or several storage backends (separated by space)
-to query after the primary cache storage. See
-\fISecondary storage backends\fP for documentation of syntax and available
+to query after checking the local cache (unless
+\fBremote_only\fP is true). See
+\fIREMOTE STORAGE BACKENDS\fP for documentation of syntax and available
 backends.
 .sp
 Examples:
@@ -1237,6 +1409,17 @@ Examples:
 .  sp -1
 .  IP \(bu 2.3
 .\}
+\fBfile:///Z:/example/windows/folder\fP
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
 \fBhttp://example.com/cache\fP
 .RE
 .sp
@@ -1249,7 +1432,53 @@ Examples:
 .  IP \(bu 2.3
 .\}
 \fBredis://example.com\fP
+.if n .sp
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+.B Note
+.ps -1
+.br
+.sp
+In previous ccache versions this option was called \fBsecondary_storage\fP
+(\fBCCACHE_SECONDARY_STORAGE\fP), which can still be used as an alias.
+.sp .5v
 .RE
+.RE
+.RE
+.sp
+\fBreshare\fP (\fBCCACHE_RESHARE\fP or \fBCCACHE_NORESHARE\fP, see \fIBoolean values\fP above)
+.RS 4
+If true, ccache will write results to remote storage even for local storage
+cache hits. The default is false.
+.RE
+.sp
+\fBrun_second_cpp\fP (\fBCCACHE_CPP2\fP or \fBCCACHE_NOCPP2\fP, see \fIBoolean values\fP above)
+.RS 4
+If true, ccache will first run the preprocessor to preprocess the source
+code (see \fIThe preprocessor mode\fP) and then on a cache miss run the
+compiler on the source code to get hold of the object file. This is the
+default.
+.sp
+If false, ccache will first run preprocessor to preprocess the source code and
+then on a cache miss run the compiler on the \fIpreprocessed source code\fP instead
+of the original source code. This makes cache misses slightly faster since the
+source code only has to be preprocessed once. The downside is that some
+compilers won\(cqt produce the same result (for instance diagnostics warnings)
+when compiling preprocessed source code.
+.sp
+A solution to the above mentioned downside is to set \fBrun_second_cpp\fP to false
+and pass \fB\-fdirectives\-only\fP (for GCC) or \fB\-frewrite\-includes\fP (for Clang) to
+the compiler. This will cause the compiler to leave the macros and other
+preprocessor information, and only process the \fB#include\fP directives. When run
+in this way, the preprocessor arguments will be passed to the compiler since it
+still has to do \fIsome\fP preprocessing (like macros).
+.sp
+This option is ignored with MSVC, as there is no way to make it compile without
+preprocessing first.
 .RE
 .sp
 \fBsloppiness\fP (\fBCCACHE_SLOPPINESS\fP)
@@ -1280,7 +1509,7 @@ as matching its cached version if the mtimes and ctimes match.
 \fBfile_stat_matches_ctime\fP
 .RS 4
 Ignore ctimes when \fBfile_stat_matches\fP is enabled. This can be useful when
-backdating files\(aq mtimes in a controlled way.
+backdating files\*(Aq mtimes in a controlled way.
 .RE
 .sp
 \fBgcno_cwd\fP
@@ -1291,21 +1520,22 @@ when producing a \fB.gcno\fP file (when compiling with \fB\-ftest\-coverage\fP o
 in the \fB.gcno\fP file. The \fBgcno_cwd\fP sloppiness makes ccache not hash the
 current working directory so that you can get cache hits when compiling in
 different directories, with the tradeoff of potentially getting an incorrect
-directory in the \fB.gcno\fP file.
+directory in the \fB.gcno\fP file. \fBgcno_cwd\fP also disables hashing of the
+current working directory if \fB\-fprofile\-abs\-path\fP is used.
 .RE
 .sp
 \fBinclude_file_ctime\fP
 .RS 4
-By default, ccache will not cache a file if it includes a header whose ctime
-is too new. This sloppiness disables that check. See also
-\fIHandling of newly created header files\fP.
+By default, ccache will disable the direct mode if an include file has too
+new ctime. This sloppiness disables that check. See also \fI[Handling of
+newly created header files]\fP.
 .RE
 .sp
 \fBinclude_file_mtime\fP
 .RS 4
-By default, ccache will not cache a file if it includes a header whose mtime
-is too new. This sloppiness disables that check. See also
-\fIHandling of newly created header files\fP.
+By default, ccache will disable the direct mode if an include file has too
+new mtime. This sloppiness disables that check. See also \fI[Handling of
+newly created header files]\fP.
 .RE
 .sp
 \fBivfsoverlay\fP
@@ -1323,18 +1553,25 @@ compiler warning messages. Set this sloppiness to tell ccache not to do
 that.
 .RE
 .sp
-\fBpch_defines\fP
-.RS 4
-Be sloppy about \fB#define\fP directives when precompiling a header file. See
-\fIPrecompiled headers\fP for more information.
-.RE
-.sp
 \fBmodules\fP
 .RS 4
 By default, ccache will not cache compilations if \fB\-fmodules\fP is used since
 it cannot hash the state of compiler\(cqs internal representation of relevant
 modules. This sloppiness allows caching in such a case. See
-\fIC++ modules\fP for more information.
+\fIC++ MODULES\fP for more information.
+.RE
+.sp
+\fBpch_defines\fP
+.RS 4
+Be sloppy about \fB#define\fP directives when precompiling a header file. See
+\fIPRECOMPILED HEADERS\fP for more information.
+.RE
+.sp
+\fBrandom_seed\fP
+.RS 4
+Ignore the \fB\-frandom\-seed\fP option and its arguments when computing the input
+hash. This is useful if your build system generates different seeds between
+builds and you are OK with reusing cached results.
 .RE
 .sp
 \fBsystem_headers\fP
@@ -1350,13 +1587,13 @@ Ignore \fB__DATE__\fP, \fB__TIME__\fP and \fB__TIMESTAMP__\fP being present in t
 source code.
 .RE
 .sp
-See the discussion under \fITroubleshooting\fP for more information.
+See the discussion under \fITROUBLESHOOTING\fP for more information.
 .RE
 .sp
 \fBstats\fP (\fBCCACHE_STATS\fP or \fBCCACHE_NOSTATS\fP, see \fIBoolean values\fP above)
 .RS 4
-If true, ccache will update the statistics counters on each compilation.
-The default is true.
+If true, ccache will update the statistics counters on each compilation. The
+default is true. If false, \fI[automatic cleanup]\fP will be disabled as well.
 .RE
 .sp
 \fBstats_log\fP (\fBCCACHE_STATSLOG\fP)
@@ -1383,7 +1620,8 @@ Lines in the stats log starting with a hash sign (\fB#\fP) are comments.
 \fBtemporary_dir\fP (\fBCCACHE_TEMPDIR\fP)
 .RS 4
 This option specifies where ccache will put temporary files. The default is
-\fB/run/user/<UID>/ccache\-tmp\fP if \fB/run/user/<UID>\fP exists, otherwise
+\fB$XDG_RUNTIME_DIR/ccache\-tmp\fP (typically \fB/run/user/<UID>/ccache\-tmp\fP) if
+\fBXDG_RUNTIME_DIR\fP is set and the directory exists, otherwise
 \fB<cache_dir>/tmp\fP.
 .if n .sp
 .RS 4
@@ -1408,23 +1646,32 @@ This option (an octal integer) specifies the umask for files and directories
 in the cache directory. This is mostly useful when you wish to share your
 cache with other users.
 .RE
-.SH "SECONDARY STORAGE BACKENDS"
+.SS "Disabling ccache"
 .sp
-The \fBsecondary_storage\fP option lets you configure
-ccache to use one or several other storage backends in addition to the primary
-cache storage located in \fBcache_dir\fP. Note that cache
-statistics counters will still be kept in the primary cache directory \(em secondary storage backends only store cache results and manifests.
+To disable ccache completely for all invocations, set \fBdisable
+= true\fP (\fBCCACHE_DISABLE=1\fP). You can also disable ccache for a certain source
+code file by adding the string \fBccache:disable\fP in a comment in the first 4096
+bytes of the file. In the latter case the \fBCcache disabled\fP statistics counter
+will be increased.
+.SH "REMOTE STORAGE BACKENDS"
 .sp
-A secondary storage backend is specified with a URL, optionally followed by a
-pipe (\fB|\fP) and a pipe\-separated list of attributes. An attribute is
-\fIkey\fP=\fIvalue\fP or just \fIkey\fP as a short form of \fIkey\fP=\fBtrue\fP. Attribute values
-must be \c
-.URL "https://en.wikipedia.org/wiki/Percent\-encoding" "percent\-encoded" " "
-if they
-contain percent, pipe or space characters.
+The \fBremote_storage\fP option lets you configure ccache
+to use one or several remote storage backends. By default, the local cache
+directory located in \fBcache_dir\fP will be queried first and
+remote storage second, but \fBremote_only\fP can be set to
+true to disable local storage. Note that cache statistics counters will still be
+kept in the local cache directory \(em remote storage backends only store
+compilation results and manifests.
+.sp
+A remote storage backend is specified with a URL, optionally followed by a pipe
+(\fB|\fP) and a pipe\-separated list of attributes. An attribute is \fIkey\fP=\fIvalue\fP or
+just \fIkey\fP as a short form of \fIkey\fP=\fBtrue\fP. Attribute values must be
+.URL "https://en.wikipedia.org/wiki/Percent\-encoding" "percent\-encoded" ""
+if they contain
+percent, pipe or space characters.
 .SS "Attributes for all backends"
 .sp
-These optional attributes are available for all secondary storage backends:
+These optional attributes are available for all remote storage backends:
 .sp
 .RS 4
 .ie n \{\
@@ -1486,31 +1733,20 @@ of the cache on \fBredis://cache\-a.example.com\fP, 18% (1/5.5) on
 \fBhttp://example.com/alpha\fP and 50% on \fBhttp://example.com/beta\fP.
 .RE
 .RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04'\(bu\h'+03'\c
-.\}
-.el \{\
-.  sp -1
-.  IP \(bu 2.3
-.\}
-\fBshare\-hits\fP: If \fBtrue\fP, write hits for this backend to primary storage. The
-default is \fBtrue\fP.
-.RE
 .SS "Storage interaction"
 .sp
-The table below describes the interaction between primary and secondary storage
-on cache hits and misses:
+The table below describes the interaction between local and remote storage on
+cache hits and misses if \fBremote_only\fP is false (which is
+the default):
 .TS
 allbox tab(:);
 lt lt lt.
 T{
 .sp
-\fBPrimary storage\fP
+\fBLocal storage\fP
 T}:T{
 .sp
-\fBSecondary storage\fP
+\fBRemote storage\fP
 T}:T{
 .sp
 \fBWhat happens\fP
@@ -1523,7 +1759,7 @@ T}:T{
 miss
 T}:T{
 .sp
-Compile, write to primary, write to secondary[1]
+Compile, write to local, write to remote[1]
 T}
 T{
 .sp
@@ -1533,7 +1769,7 @@ T}:T{
 hit
 T}:T{
 .sp
-Read from secondary, write to primary[2]
+Read from remote, write to local
 T}
 T{
 .sp
@@ -1543,25 +1779,62 @@ T}:T{
 \-
 T}:T{
 .sp
-Read from primary, don\(cqt write to secondary[3]
+Read from local, don\(cqt write to remote[2]
 T}
 .TE
 .sp
 .sp
-[1] Unless secondary storage has attribute \fBread\-only=true\fP.
+[1] Unless remote storage has attribute \fBread\-only=true\fP.
 .br
-[2] Unless secondary storage has attribute \fBshare\-hits=false\fP.
-.br
-[3] Unless primary storage is set to share its cache hits with the
+[2] Unless local storage is set to share its cache hits with the
 \fBreshare\fP option.
+.sp
+If \fBremote_only\fP is true:
+.TS
+allbox tab(:);
+lt lt lt.
+T{
+.sp
+\fBLocal storage\fP
+T}:T{
+.sp
+\fBRemote storage\fP
+T}:T{
+.sp
+\fBWhat happens\fP
+T}
+T{
+.sp
+\-
+T}:T{
+.sp
+miss
+T}:T{
+.sp
+Compile, write to remote, don\(cqt write to local
+T}
+T{
+.sp
+\-
+T}:T{
+.sp
+hit
+T}:T{
+.sp
+Read from remote, don\(cqt write to local
+T}
+.TE
+.sp
 .SS "File storage backend"
 .sp
-URL format: \fBfile:DIRECTORY\fP or \fBfile://DIRECTORY\fP
+URL format: \fBfile:DIRECTORY\fP or \fBfile://[HOST]DIRECTORY\fP
 .sp
 This backend stores data as separate files in a directory structure below
-\fBDIRECTORY\fP (an absolute path), similar (but not identical) to the primary cache
-storage. A typical use case for this backend would be sharing a cache on an NFS
-directory.
+\fBDIRECTORY\fP, similar (but not identical) to the local cache storage. A typical
+use case for this backend would be sharing a cache on an NFS directory.
+\fBDIRECTORY\fP must start with a slash. \fBHOST\fP can be the empty string or
+localhost. On Windows, \fBHOST\fP can also be the name of a server hosting a shared
+folder.
 .if n .sp
 .RS 4
 .it 1 an-trap
@@ -1600,6 +1873,28 @@ Examples:
 .  IP \(bu 2.3
 .\}
 \fBfile:///shared/nfs/directory|umask=002|update\-mtime=true\fP
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBfile:///Z:/example/windows/folder\fP
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBfile://example.com/shared/ccache%20folder\fP
 .RE
 .sp
 Optional attributes:
@@ -1864,10 +2159,16 @@ The default is \fBsubdirs\fP.
 .RE
 .SS "Redis storage backend"
 .sp
-URL format: \fBredis://[[USERNAME:]PASSWORD@]HOST[:PORT][/DBNUMBER]\fP
+URL formats:
+.sp
+\fBredis://[[USERNAME:]PASSWORD@]HOST[:PORT][/DBNUMBER]\fP
+.br
+\fBredis+unix:SOCKET_PATH[?db=DBNUMBER]\fP
+.br
+\fBredis+unix://[[USERNAME:]PASSWORD@localhost]SOCKET_PATH[?db=DBNUMBER]\fP
 .sp
 This backend stores data in a \c
-.URL "https://redis.io" "Redis" " "
+.URL "https://redis.io" "Redis" ""
 (or Redis\-compatible)
 server. There are implementations for both memory\-based and disk\-based storage.
 \fBPORT\fP defaults to \fB6379\fP and \fBDBNUMBER\fP defaults to \fB0\fP.
@@ -1914,7 +2215,7 @@ storage"  for hints on setting up a Redis server for use with ccache.
 .br
 .sp
 You can set up a cluster of Redis servers using the \fBshards\fP attribute
-described in \fISecondary storage backends\fP.
+described in \fIREMOTE STORAGE BACKENDS\fP.
 .sp .5v
 .RE
 .sp
@@ -1940,6 +2241,39 @@ Examples:
 .  IP \(bu 2.3
 .\}
 \fBredis://p4ssw0rd@cache.example.com:6379/0|connect\-timeout=50\fP
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBredis+unix:/run/redis.sock\fP
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBredis+unix:///run/redis.sock\fP
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+\fBredis+unix://p4ssw0rd@localhost/run/redis.sock?db=0\fP
 .RE
 .sp
 Optional attributes:
@@ -1976,73 +2310,23 @@ limits (in addition to other various statistics).
 Cleanup can be triggered in two different ways: automatic and manual.
 .SS "Automatic cleanup"
 .sp
-Ccache maintains counters for various statistics about the cache, including the
-size and number of all cached files. In order to improve performance and reduce
-issues with concurrent ccache invocations, there is one statistics file for
-each of the sixteen subdirectories in the cache.
-.sp
-After a new compilation result has been written to the cache, ccache will
-update the size and file number statistics for the subdirectory (one of
-sixteen) to which the result was written. Then, if the size counter for said
-subdirectory is greater than \fBmax_size / 16\fP or the file number counter is
-greater than \fBmax_files / 16\fP, automatic cleanup is triggered.
-.sp
-When automatic cleanup is triggered for a subdirectory in the cache, ccache
-will:
-.sp
-.RS 4
-.ie n \{\
-\h'-04' 1.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 1." 4.2
-.\}
-Count all files in the subdirectory and compute their aggregated size.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04' 2.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 2." 4.2
-.\}
-Remove files in LRU (least recently used) order until the size is at most
-\fBlimit_multiple * max_size / 16\fP and the number of files is at most
-\fBlimit_multiple * max_files / 16\fP, where
-\fBlimit_multiple\fP, \fBmax_size\fP
-and \fBmax_files\fP are configuration options.
-.RE
-.sp
-.RS 4
-.ie n \{\
-\h'-04' 3.\h'+01'\c
-.\}
-.el \{\
-.  sp -1
-.  IP " 3." 4.2
-.\}
-Set the size and file number counters to match the files that were kept.
-.RE
-.sp
-The reason for removing more files than just those needed to not exceed the max
-limits is that a cleanup is a fairly slow operation, so it would not be a good
-idea to trigger it often, like after each cache miss.
+After a new compilation result has been written to the local cache, ccache will
+trigger an automatic cleanup if \fBmax_size\fP or
+\fBmax_files\fP is exceeded. The cleanup removes cache entries
+in LRU (least recently used) order based on the modification time (mtime) of
+files in the cache. For this reason, ccache updates mtime of the cache files
+read on a cache hit to mark them as recently used.
 .SS "Manual cleanup"
 .sp
-You can run \fBccache \-c/\-\-cleanup\fP to force cleanup of the whole cache, i.e. all
-of the sixteen subdirectories. This will recalculate the statistics counters
-and make sure that the configuration options \fBmax_size\fP and
-\fBmax_files\fP are not exceeded. Note that
-\fBlimit_multiple\fP is not taken into account for manual
-cleanup.
+You can run \fBccache \-c/\-\-cleanup\fP to force cleanup of the whole cache. This will
+recalculate the cache size information and also make sure that the cache size
+does not exceed \fBmax_size\fP and
+\fBmax_files\fP.
 .SH "CACHE COMPRESSION"
 .sp
 Ccache will by default compress all data it puts into the cache using the
 compression algorithm \c
-.URL "http://zstd.net" "Zstandard" " "
+.URL "http://zstd.net" "Zstandard" ""
 (zstd) using compression level
 1. The algorithm is fast enough that there should be little reason to turn off
 compression to gain performance. One exception is if the cache is located on a
@@ -2056,11 +2340,13 @@ information related to compression. Example:
 .sp
 .if n .RS 4
 .nf
+.fam C
 Total data:           14.8 GB (16.0 GB disk blocks)
 Compressed data:      11.3 GB (30.6% of original size)
   Original size:      36.9 GB
   Compression ratio: 3.267 x  (69.4% space savings)
 Incompressible data:   3.5 GB
+.fam
 .fi
 .if n .RE
 .sp
@@ -2130,7 +2416,7 @@ recompressed.
 cleanups (number of performed cleanups, either implicitly due to a cache size
 limit being reached or due to explicit \fBccache \-c\fP calls), overall hit rate, hit
 rate for direct/preprocessed modes
-and hit rate for primary and secondary storage.
+and hit rate for local and remote storage.
 .sp
 The summary also includes counters called \(lqErrors\(rq and \(lqUncacheable\(rq, which
 are sums of more detailed counters. To see those detailed counters, use the
@@ -2179,10 +2465,17 @@ The compiler was called for preprocessing, not compiling.
 T}
 T{
 .sp
+Ccache disabled
+T}:T{
+.sp
+Ccache was disabled by a \fBccache:disable\fP string in the source code file.
+T}
+T{
+.sp
 Could not use modules
 T}:T{
 .sp
-Preconditions for using C++ modules were not fulfilled.
+Preconditions for using C++ MODULES were not fulfilled.
 T}
 T{
 .sp
@@ -2197,8 +2490,7 @@ T{
 Could not write to output file
 T}:T{
 .sp
-The output path specified with \fB\-o\fP is not a file (e.g. a directory or a device
-node).
+The output path specified with \fB\-o\fP could not be written to.
 T}
 T{
 .sp
@@ -2217,18 +2509,18 @@ A compiler check program specified by
 T}
 T{
 .sp
-Compiler produced empty output
+Compiler output file missing
 T}:T{
 .sp
-The compiler\(cqs output file (typically an object file) was empty after
+One of the files expected to be produced by the compiler was missing after
 compilation.
 T}
 T{
 .sp
-Compiler produced no output
+Compiler produced empty output
 T}:T{
 .sp
-The compiler\(cqs output file (typically an object file) was missing after
+The compiler\(cqs output file (typically an object file) was empty after
 compilation.
 T}
 T{
@@ -2601,8 +2893,8 @@ a compiler option not supported by the direct mode is used:
 .  sp -1
 .  IP \(bu 2.3
 .\}
-a \fB\-Wp,*\fP compiler option other than \fB\-Wp,\-MD,<path>\fP, \fB\-Wp,\-MMD,<path>\fP
-and \fB\-Wp,\-D<define>\fP
+a \fB\-Wp,*\fP compiler option other than \fB\-Wp,\-MD,<path>\fP, \fB\-Wp,\-MMD,<path>\fP,
+\fB\-Wp,\-D<macro[=defn]>\fP or \fB\-Wp,\-U<macro>\fP
 .RE
 .sp
 .RS 4
@@ -2632,7 +2924,8 @@ the string \fB__TIME__\fP is present in the source code
 If the depend mode is enabled, ccache will not use the preprocessor at all. The
 hash used to identify results in the cache will be based on the direct mode
 hash described above plus information about include files read from the
-dependency file generated by the compiler with \fB\-MD\fP or \fB\-MMD\fP.
+dependency list generated by MSVC with \fB/showIncludes\fP, or the dependency file
+generated by other compilers with \fB\-MD\fP or \fB\-MMD\fP.
 .sp
 Advantages:
 .sp
@@ -2684,9 +2977,9 @@ to some types of changes of compiler options and source code changes.
 .  sp -1
 .  IP \(bu 2.3
 .\}
-If \-MD is used, the manifest entries will include system header files as
-well, thus slowing down cache hits slightly, just as using \-MD slows down
-make.
+If \fB\-MD\fP is used, the manifest entries will include system header files as
+well, thus slowing down cache hits slightly, just as using \fB\-MD\fP slows down
+make. This is also the case for MSVC with \fB/showIncludes\fP.
 .RE
 .sp
 .RS 4
@@ -2697,7 +2990,7 @@ make.
 .  sp -1
 .  IP \(bu 2.3
 .\}
-If \-MMD is used, the manifest entries will not include system header files,
+If \fB\-MMD\fP is used, the manifest entries will not include system header files,
 which means ccache will ignore changes in them.
 .RE
 .sp
@@ -2733,13 +3026,14 @@ The depend mode will be disabled if any of the following holds:
 .  sp -1
 .  IP \(bu 2.3
 .\}
-The compiler is not generating dependencies using \fB\-MD\fP or \fB\-MMD\fP.
+The compiler is not generating dependencies using \fB\-MD\fP or \fB\-MMD\fP (for MSVC,
+\fB/showIncludes\fP is added automatically if not specified by the user).
 .RE
 .SH "HANDLING OF NEWLY CREATED HEADER FILES"
 .sp
 If modification time (mtime) or status change time (ctime) of one of the include
-files is the same second as the time compilation is being done, ccache disables
-the direct mode (or, in the case of a precompiled
+files is equal to (or newer than) the time compilation is being done, ccache
+disables the direct mode (or, in the case of a precompiled
 header, disables caching completely). This done as a safety measure to avoid a
 race condition (see below).
 .sp
@@ -2849,41 +3143,50 @@ T}:T{
 T}
 T{
 .sp
-\fB<objectfile>.ccache\-input\-c\fP
+\fB<objectfile>.<timestamp>.ccache\-input\-c\fP
 T}:T{
 .sp
 Binary input hashed by both the direct mode and the preprocessor mode.
 T}
 T{
 .sp
-\fB<objectfile>.ccache\-input\-d\fP
+\fB<objectfile>.<timestamp>.ccache\-input\-d\fP
 T}:T{
 .sp
 Binary input only hashed by the direct mode.
 T}
 T{
 .sp
-\fB<objectfile>.ccache\-input\-p\fP
+\fB<objectfile>.<timestamp>.ccache\-input\-p\fP
 T}:T{
 .sp
 Binary input only hashed by the preprocessor mode.
 T}
 T{
 .sp
-\fB<objectfile>.ccache\-input\-text\fP
+\fB<objectfile>.<timestamp>.ccache\-input\-text\fP
 T}:T{
 .sp
 Human\-readable combined diffable text version of the three files above.
 T}
 T{
 .sp
-\fB<objectfile>.ccache\-log\fP
+\fB<objectfile>.<timestamp>.ccache\-log\fP
 T}:T{
 .sp
 Log for this object file.
 T}
 .TE
 .sp
+.sp
+.if n .RS 4
+.nf
+.fam C
+ The timestamp format is
+`<year><month><day>_<hour><minute><second>_<microsecond>`.
+.fam
+.fi
+.if n .RE
 .sp
 If \fBdebug_dir\fP (environment variable \fBCCACHE_DEBUGDIR\fP) is
 set, the files above will be written to that directory with full absolute paths
@@ -2910,7 +3213,7 @@ something like this:
 .  sp -1
 .  IP " 1." 4.2
 .\}
-Build with debug mode enabled.
+Enable \fBdebug\fP (\fBCCACHE_DEBUG\fP).
 .RE
 .sp
 .RS 4
@@ -2921,7 +3224,7 @@ Build with debug mode enabled.
 .  sp -1
 .  IP " 2." 4.2
 .\}
-Save the \fB<objectfile>.ccache\-*\fP files.
+Build.
 .RE
 .sp
 .RS 4
@@ -2932,7 +3235,7 @@ Save the \fB<objectfile>.ccache\-*\fP files.
 .  sp -1
 .  IP " 3." 4.2
 .\}
-Build again with debug mode enabled.
+Clean and build again.
 .RE
 .sp
 .RS 4
@@ -2943,9 +3246,9 @@ Build again with debug mode enabled.
 .  sp -1
 .  IP " 4." 4.2
 .\}
-Compare \fB<objectfile>.ccache\-input\-text\fP for the two builds. This together
-with the \fB<objectfile>.ccache\-log\fP files should give you some clues about
-what is happening.
+Compare the \fB<objectfile>.<timestamp>.ccache\-input\-text\fP files for the two
+builds. This together with the \fB<objectfile>.<timestamp>.ccache\-log\fP files
+should give you some clues about what is happening.
 .RE
 .SH "COMPILING IN DIFFERENT DIRECTORIES"
 .sp
@@ -3049,8 +3352,8 @@ relative before computing the hash.
 .RE
 .SH "PRECOMPILED HEADERS"
 .sp
-Ccache has support for GCC\(cqs precompiled headers. However, you have to do some
-things to make it work properly:
+Ccache has support for precompiled headers with GCC and Clang. However, you have
+to do some things to make it work properly:
 .sp
 .RS 4
 .ie n \{\
@@ -3077,7 +3380,7 @@ works in combination with precompiled headers.
 .\}
 You may also want to include \fBinclude_file_mtime,include_file_ctime\fP in
 \fBsloppiness\fP. See
-\fIHandling of newly created header files\fP.
+\fIHANDLING OF NEWLY CREATED HEADER FILES\fP.
 .RE
 .sp
 .RS 4
@@ -3127,12 +3430,23 @@ the PCH file generated from the precompiled header; or
 (for the GCC compiler) add the compiler option \fB\-fpch\-preprocess\fP when
 compiling.
 .RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.  sp -1
+.  IP \(bu 2.3
+.\}
+If you use Clang, you must compile with \fB\-fno\-pch\-timestamp\fP.
+.RE
 .sp
 If you don\(cqt do this, either the non\-precompiled version of the header file will
 be used (if available) or ccache will fall back to running the real compiler and
 increase the statistics counter \(lqPreprocessing failed\(rq (if the non\-precompiled
 header file is not available).
-.RE
 .SH "C++ MODULES"
 .sp
 Ccache has support for Clang\(cqs \fB\-fmodules\fP option. In practice ccache only
@@ -3146,10 +3460,10 @@ You must use both \fBdirect mode\fP and
 \fBdepend mode\fP. When using
 the preprocessor mode Clang does not provide enough
 information to allow hashing of \fBmodule.modulemap\fP files.
-.SH "SHARING A CACHE"
+.SH "SHARING A LOCAL CACHE"
 .sp
-A group of developers can increase the cache hit rate by sharing a cache
-directory. To share a cache without unpleasant side effects, the following
+A group of developers can increase the cache hit rate by sharing a local cache
+directory. To share a local cache without unpleasant side effects, the following
 conditions should to be met:
 .sp
 .RS 4
@@ -3224,7 +3538,9 @@ following command might be useful for this:
 .sp
 .if n .RS 4
 .nf
+.fam C
 find $CCACHE_DIR \-type d | xargs chmod g+s
+.fam
 .fi
 .if n .RE
 .RE
@@ -3277,7 +3593,7 @@ systems. One way of improving cache hit rate in that case is to set
 headers.
 .sp
 An alternative to putting the main cache directory on NFS is to set up a
-secondary storage file cache.
+remote storage file cache.
 .SH "USING CCACHE WITH OTHER COMPILER WRAPPERS"
 .sp
 The recommended way of combining ccache with another compiler wrapper (such as
@@ -3342,7 +3658,7 @@ The direct mode fails to pick up new header files in some rare scenarios. See
 .sp
 A general tip for getting information about what ccache is doing is to enable
 debug logging by setting the configuration option \fBdebug\fP (or
-the environment variable \fBCCACHE_DEBUG\fP); see \fICache debugging\fP
+the environment variable \fBCCACHE_DEBUG\fP); see \fICACHE DEBUGGING\fP
 for more information. Another way of keeping track of what is
 happening is to check the output of \fBccache \-s\fP.
 .SS "Performance"
@@ -3430,7 +3746,7 @@ base directory.
 .\}
 A modification or status change time of one of the include files is too new
 (created the same second as the compilation is being done). See
-\fIHandling of newly created header files\fP.
+\fIHANDLING OF NEWLY CREATED HEADER FILES\fP.
 .RE
 .sp
 .RS 4
@@ -3553,7 +3869,7 @@ and check which compiler option was rejected.
 .  IP \(bu 2.3
 .\}
 If \(lqPreprocessing failed\(rq has been incremented, one possible reason is that
-precompiled headers are being used. See \fIPrecompiled headers\fP for how to
+precompiled headers are being used. See \fIPRECOMPILED HEADERS\fP for how to
 remedy this.
 .RE
 .sp
@@ -3566,7 +3882,7 @@ remedy this.
 .  IP \(bu 2.3
 .\}
 If \(lqCould not use precompiled header\(rq has been incremented, see
-\fIPrecompiled headers\fP.
+\fIPRECOMPILED HEADERS\fP.
 .RE
 .sp
 .RS 4
@@ -3577,7 +3893,7 @@ If \(lqCould not use precompiled header\(rq has been incremented, see
 .  sp -1
 .  IP \(bu 2.3
 .\}
-If \(lqCould not use modules\(rq has been incremented, see \fIC++ modules\fP.
+If \(lqCould not use modules\(rq has been incremented, see \fIC++ MODULES\fP.
 .RE
 .SS "Corrupt object files"
 .sp
@@ -3636,5 +3952,5 @@ etc, can be found on ccache\(cqs web site: \c
 .sp
 Ccache was originally written by Andrew Tridgell and is currently developed and
 maintained by Joel Rosdahl. See AUTHORS.txt or AUTHORS.html and
-.URL "https://ccache.dev/credits.html" "" " "
+.URL "https://ccache.dev/credits.html" "" ""
 for a list of contributors.
